@@ -23,9 +23,30 @@ import {
   Plus,
   MoreHorizontal,
   FileText,
+  X,
 } from "lucide-react";
+import { useState } from "react";
+import { StatsWidget } from "./widgets/StatsWidget";
+import { DealsWidget } from "./widgets/DealsWidget";
+import { TasksWidget } from "./widgets/TasksWidget";
+import { ActivitiesWidget } from "./widgets/ActivitiesWidget";
+import { DragDropContext, Droppable, Draggable, DropResult } from "react-beautiful-dnd";
 
-const stats = [
+// Type definitions for widget data
+import type { Stat } from "./widgets/StatsWidget";
+import type { Deal } from "./widgets/DealsWidget";
+import type { Task } from "./widgets/TasksWidget";
+import type { Activity } from "./widgets/ActivitiesWidget";
+
+const ALL_WIDGETS = [
+  { id: "stats", title: "Key Metrics", component: StatsWidget, gridSize: 2 },
+  { id: "deals", title: "Pipeline Overview", component: DealsWidget, gridSize: 1 },
+  { id: "tasks", title: "Today's Tasks", component: TasksWidget, gridSize: 1 },
+  { id: "activities", title: "Recent Activities", component: ActivitiesWidget, gridSize: 2 },
+  // Add more widgets here
+];
+
+const stats: Stat[] = [
   {
     title: "Leads",
     value: "342",
@@ -60,7 +81,7 @@ const stats = [
   },
 ];
 
-const recentDeals = [
+const recentDeals: Deal[] = [
   {
     company: "Acme Corporation",
     amount: "$125,000",
@@ -99,7 +120,7 @@ const recentDeals = [
   },
 ];
 
-const upcomingTasks = [
+const upcomingTasks: Task[] = [
   {
     task: "Follow up with Acme Corp",
     type: "Call",
@@ -130,6 +151,44 @@ const upcomingTasks = [
   },
 ];
 
+const activities: Activity[] = [
+  {
+    action: "New lead created",
+    details: "Acme Corporation - Enterprise inquiry",
+    time: "2 minutes ago",
+    icon: Users,
+    color: "text-blue-600",
+  },
+  {
+    action: "Deal closed",
+    details: "TechFlow Inc - $45,000 contract signed",
+    time: "1 hour ago",
+    icon: DollarSign,
+    color: "text-green-600",
+  },
+  {
+    action: "Meeting scheduled",
+    details: "Demo call with Global Solutions",
+    time: "3 hours ago",
+    icon: Calendar,
+    color: "text-purple-600",
+  },
+  {
+    action: "Quote sent",
+    details: "StartupX - Software licensing proposal",
+    time: "5 hours ago",
+    icon: FileText,
+    color: "text-orange-600",
+  },
+  {
+    action: "Contact updated",
+    details: "Sarah Johnson profile information",
+    time: "Yesterday",
+    icon: Users,
+    color: "text-gray-600",
+  },
+];
+
 export default function Index() {
   const currentTime = new Date().toLocaleTimeString([], {
     hour: "2-digit",
@@ -141,6 +200,28 @@ export default function Index() {
     month: "long",
     day: "numeric",
   });
+
+  const [activeWidgets, setActiveWidgets] = useState(["stats", "deals", "tasks", "activities"]);
+  const [showAddDropdown, setShowAddDropdown] = useState(false);
+
+  function handleDragEnd(result: DropResult) {
+    if (!result.destination) return;
+    const reordered = Array.from(activeWidgets);
+    const [removed] = reordered.splice(result.source.index, 1);
+    reordered.splice(result.destination.index, 0, removed);
+    setActiveWidgets(reordered);
+  }
+
+  function handleRemoveWidget(id: string) {
+    setActiveWidgets((prev) => prev.filter((wid) => wid !== id));
+  }
+
+  function handleAddWidget(id: string) {
+    setActiveWidgets((prev) => [...prev, id]);
+    setShowAddDropdown(false);
+  }
+
+  const availableWidgets = ALL_WIDGETS.filter(w => !activeWidgets.includes(w.id));
 
   return (
     <div className="p-8 space-y-8 bg-background min-h-screen">
@@ -167,161 +248,99 @@ export default function Index() {
         </div>
       </div>
 
-      {/* Key Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {stats.map((stat) => (
-          <Card key={stat.title} className="border border-border/50">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                {stat.title}
-              </CardTitle>
-              <stat.icon className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-foreground">
-                {stat.value}
-              </div>
-              <div className="flex items-center text-xs text-muted-foreground mt-1">
-                {stat.trend === "up" ? (
-                  <ArrowUpRight className="w-3 h-3 text-green-500 mr-1" />
-                ) : (
-                  <ArrowDownRight className="w-3 h-3 text-red-500 mr-1" />
-                )}
-                <span
-                  className={
-                    stat.trend === "up" ? "text-green-600" : "text-red-600"
-                  }
-                >
-                  {stat.change}
-                </span>
-                <span className="ml-1">{stat.description}</span>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+      {/* Add Widget Button and Dropdown */}
+      <div className="mb-4 relative">
+        <Button
+          variant="outline"
+          onClick={() => setShowAddDropdown((v) => !v)}
+          disabled={availableWidgets.length === 0}
+        >
+          + Add Widget
+        </Button>
+        {showAddDropdown && (
+          <div className="absolute z-10 mt-2 bg-popover border border-border rounded shadow-lg min-w-[180px]">
+            {availableWidgets.map((widget) => (
+              <button
+                key={widget.id}
+                className="w-full text-left px-4 py-2 hover:bg-muted transition-colors"
+                onClick={() => handleAddWidget(widget.id)}
+              >
+                {widget.title}
+              </button>
+            ))}
+            <button
+              className="w-full text-left px-4 py-2 hover:bg-muted transition-colors border-t border-border"
+              onClick={() => {
+                // For now, just alert. You can replace this with a modal for custom widget creation.
+                setShowAddDropdown(false);
+                alert('Custom widget creation coming soon!');
+              }}
+            >
+              + Custom Widget
+            </button>
+          </div>
+        )}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Recent Deals */}
-        <Card className="border border-border/50">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <div>
-              <CardTitle className="text-lg font-semibold">
-                Pipeline Overview
-              </CardTitle>
-              <CardDescription>Your most active deals</CardDescription>
+      {/* Render widgets in order with drag-and-drop */}
+      <DragDropContext onDragEnd={handleDragEnd}>
+        <Droppable droppableId="dashboard-widgets" direction="horizontal">
+          {(provided) => (
+            <div
+              className="grid grid-cols-1 lg:grid-cols-2 gap-8"
+              ref={provided.innerRef}
+              {...provided.droppableProps}
+            >
+              {activeWidgets.map((widgetId, index) => {
+                const widget = ALL_WIDGETS.find((w) => w.id === widgetId);
+                if (!widget) return null;
+                let WidgetComponent = null;
+                if (widget.id === "stats")
+                  WidgetComponent = <StatsWidget stats={stats} />;
+                if (widget.id === "deals")
+                  WidgetComponent = <DealsWidget recentDeals={recentDeals} />;
+                if (widget.id === "tasks")
+                  WidgetComponent = <TasksWidget upcomingTasks={upcomingTasks} />;
+                if (widget.id === "activities")
+                  WidgetComponent = <ActivitiesWidget activities={activities} />;
+                // Responsive col-span for each widget
+                const colSpan = widget.gridSize === 2 ? "col-span-1 lg:col-span-2" : "col-span-1";
+                return (
+                  <Draggable key={widget.id} draggableId={widget.id} index={index}>
+                    {(provided, snapshot) => (
+                      <div
+                        ref={provided.innerRef}
+                        {...provided.draggableProps}
+                        {...provided.dragHandleProps}
+                        className={colSpan}
+                        style={{
+                          ...provided.draggableProps.style,
+                          opacity: snapshot.isDragging ? 0.7 : 1,
+                          position: "relative",
+                        }}
+                      >
+                        {/* Remove button */}
+                        <button
+                          onClick={() => handleRemoveWidget(widget.id)}
+                          className="absolute top-2 right-2 z-20 bg-background border border-border rounded-full p-1 hover:bg-destructive hover:text-destructive-foreground transition-colors"
+                          title="Remove widget"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                        {WidgetComponent}
+                      </div>
+                    )}
+                  </Draggable>
+                );
+              })}
+              {provided.placeholder}
             </div>
-            <Button variant="ghost" size="icon">
-              <MoreHorizontal className="w-4 h-4" />
-            </Button>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {recentDeals.map((deal, index) => (
-              <div
-                key={index}
-                className="flex items-center justify-between p-4 rounded-lg bg-muted/50 hover:bg-muted/80 transition-colors"
-              >
-                <div className="flex-1">
-                  <div className="flex items-center space-x-3 mb-2">
-                    <h4 className="font-medium text-foreground">
-                      {deal.company}
-                    </h4>
-                    <Badge
-                      variant={
-                        deal.status === "hot"
-                          ? "destructive"
-                          : deal.status === "warm"
-                            ? "default"
-                            : "secondary"
-                      }
-                      className="text-xs"
-                    >
-                      {deal.status}
-                    </Badge>
-                  </div>
-                  <div className="flex items-center space-x-4 text-sm text-muted-foreground">
-                    <span>{deal.amount}</span>
-                    <span>•</span>
-                    <span>{deal.stage}</span>
-                    <span>•</span>
-                    <span>{deal.owner}</span>
-                  </div>
-                  <div className="mt-2">
-                    <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
-                      <span>Probability</span>
-                      <span>{deal.probability}%</span>
-                    </div>
-                    <Progress value={deal.probability} className="h-1" />
-                  </div>
-                </div>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-
-        {/* Upcoming Tasks */}
-        <Card className="border border-border/50">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <div>
-              <CardTitle className="text-lg font-semibold">
-                Today's Tasks
-              </CardTitle>
-              <CardDescription>Your upcoming activities</CardDescription>
-            </div>
-            <Button variant="ghost" size="icon">
-              <MoreHorizontal className="w-4 h-4" />
-            </Button>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {upcomingTasks.map((task, index) => (
-              <div
-                key={index}
-                className="flex items-center space-x-4 p-4 rounded-lg bg-muted/50 hover:bg-muted/80 transition-colors"
-              >
-                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                  {task.type === "Call" && (
-                    <Phone className="w-4 h-4 text-primary" />
-                  )}
-                  {task.type === "Email" && (
-                    <Mail className="w-4 h-4 text-primary" />
-                  )}
-                  {task.type === "Meeting" && (
-                    <Calendar className="w-4 h-4 text-primary" />
-                  )}
-                  {task.type === "Document" && (
-                    <TrendingUp className="w-4 h-4 text-primary" />
-                  )}
-                </div>
-                <div className="flex-1">
-                  <div className="flex items-center space-x-2 mb-1">
-                    <h4 className="font-medium text-foreground">{task.task}</h4>
-                    <Badge
-                      variant={
-                        task.priority === "high"
-                          ? "destructive"
-                          : task.priority === "medium"
-                            ? "default"
-                            : "secondary"
-                      }
-                      className="text-xs"
-                    >
-                      {task.priority}
-                    </Badge>
-                  </div>
-                  <div className="flex items-center space-x-4 text-sm text-muted-foreground">
-                    <span>{task.contact}</span>
-                    <span>•</span>
-                    <span>{task.time}</span>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-      </div>
+          )}
+        </Droppable>
+      </DragDropContext>
 
       {/* Recent Activities Log */}
-      <Card className="border border-border/50">
+      {/* <Card className="border border-border/50">
         <CardHeader>
           <CardTitle className="text-lg">Recent Activities</CardTitle>
           <CardDescription>Latest updates across your CRM</CardDescription>
@@ -389,10 +408,10 @@ export default function Index() {
             ))}
           </div>
         </CardContent>
-      </Card>
+      </Card> */}
 
       {/* CRM Features Showcase */}
-      <Card className="border border-border/50 bg-gradient-to-br from-primary/5 via-background to-accent/5">
+      {/* <Card className="border border-border/50 bg-gradient-to-br from-primary/5 via-background to-accent/5">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl font-bold text-foreground">
             Powerful CRM Features
@@ -450,7 +469,7 @@ export default function Index() {
             </Button>
           </div>
         </CardContent>
-      </Card>
+      </Card> */}
     </div>
   );
 }

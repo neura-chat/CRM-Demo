@@ -11,28 +11,32 @@ import {
   Search,
   Bell,
   LogOut,
+  Trash,
+  Pencil,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useState } from "react";
 
-const navigation = [
-  { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-  { name: "Sales", href: "/sales", icon: TrendingUp },
-  { name: "Marketing", href: "/marketing", icon: FileText },
-  { name: "Companies", href: "/companies", icon: Building2 },
-  { name: "Settings", href: "/settings", icon: Settings },
-];
+interface LeftNavbarProps {
+  navigation: Array<{ name: string; href: string; icon: any }>;
+  onDelete?: (name: string) => void;
+}
 
-export default function LeftNavbar() {
+export default function LeftNavbar({ navigation, onDelete }: LeftNavbarProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const [isHovered, setIsHovered] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
 
   const handleLogout = () => {
     localStorage.removeItem("isAuthenticated");
     navigate("/");
   };
+
+  // Separate settings from other navigation items
+  const settingsItem = navigation.find((item) => item.name === "Settings");
+  const mainNav = navigation.filter((item) => item.name !== "Settings");
 
   return (
     <div
@@ -78,37 +82,51 @@ export default function LeftNavbar() {
 
       {/* Navigation */}
       <nav className="flex-1 px-4 space-y-1 py-4">
-        {navigation.map((item) => {
+        {mainNav.map((item) => {
           const isActive = location.pathname === item.href;
           return (
-            <Link
-              key={item.name}
-              to={item.href}
-              className={cn(
-                "flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-colors group relative",
-                isActive
-                  ? "bg-sidebar-primary text-sidebar-primary-foreground"
-                  : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-                !isHovered && "justify-center",
-              )}
-              title={!isHovered ? item.name : ""}
-            >
-              <item.icon
-                className={cn("w-5 h-5 flex-shrink-0", isHovered && "mr-3")}
-              />
-              {isHovered && (
-                <span className="whitespace-nowrap overflow-hidden">
-                  {item.name}
-                </span>
-              )}
+            <div key={item.name} className="relative group flex items-center">
+              <Link
+                to={item.href}
+                className={cn(
+                  "flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-colors group relative flex-1",
+                  isActive
+                    ? "bg-sidebar-primary text-sidebar-primary-foreground"
+                    : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                  !isHovered && "justify-center",
+                )}
+                title={!isHovered ? item.name : ""}
+              >
+                <item.icon
+                  className={cn("w-5 h-5 flex-shrink-0", isHovered && "mr-3")}
+                />
+                {isHovered && (
+                  <span className="whitespace-nowrap overflow-hidden">
+                    {item.name}
+                  </span>
+                )}
 
-              {/* Tooltip for collapsed state */}
-              {!isHovered && (
-                <div className="absolute left-full ml-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap z-50 pointer-events-none">
-                  {item.name}
-                </div>
+                {/* Tooltip for collapsed state */}
+                {!isHovered && (
+                  <div className="absolute left-full ml-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap z-50 pointer-events-none">
+                    {item.name}
+                  </div>
+                )}
+              </Link>
+              {/* Show delete button only in edit mode and when expanded, but not for Settings */}
+              {isHovered && isEditMode && onDelete && item.name !== "Settings" && (
+                <button
+                  className="ml-2 p-1 rounded hover:bg-red-100 text-red-600 transition-colors"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDelete(item.name);
+                  }}
+                  title={`Delete ${item.name}`}
+                >
+                  <Trash className="w-4 h-4" />
+                </button>
               )}
-            </Link>
+            </div>
           );
         })}
       </nav>
@@ -147,7 +165,7 @@ export default function LeftNavbar() {
         </div>
 
         {/* Action Buttons */}
-        <div className="space-y-2">
+        <div className="space-y-2 flex flex-col gap-2">
           <Button
             variant="ghost"
             onClick={handleLogout}
@@ -167,7 +185,45 @@ export default function LeftNavbar() {
               </div>
             )}
           </Button>
+          {/* Edit Mode Toggle Button */}
+          <Button
+            variant={isEditMode ? "default" : "ghost"}
+            onClick={() => setIsEditMode((v) => !v)}
+            className={cn(
+              "w-full transition-all group relative",
+              isHovered ? "justify-start" : "justify-center px-2",
+              isEditMode ? "bg-blue-500 text-white" : "text-sidebar-foreground/60"
+            )}
+            title={!isHovered ? "Edit Navigation" : ""}
+          >
+            <Pencil className={cn("w-4 h-4", isHovered && "mr-2")} />
+            {isHovered && <span>Edit</span>}
+          </Button>
         </div>
+
+        {/* Settings Item (always visible, not deletable) */}
+        {settingsItem && (
+          <div className="mb-4">
+            <Link
+              to={settingsItem.href}
+              className={cn(
+                "flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-colors group relative",
+                location.pathname === settingsItem.href
+                  ? "bg-sidebar-primary text-sidebar-primary-foreground"
+                  : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                isHovered ? "justify-start" : "justify-center",
+              )}
+              title={!isHovered ? settingsItem.name : ""}
+            >
+              <settingsItem.icon className={cn("w-5 h-5 flex-shrink-0", isHovered && "mr-3")} />
+              {isHovered && (
+                <span className="whitespace-nowrap overflow-hidden">
+                  {settingsItem.name}
+                </span>
+              )}
+            </Link>
+          </div>
+        )}
       </div>
     </div>
   );

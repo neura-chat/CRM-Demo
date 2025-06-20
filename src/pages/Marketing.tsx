@@ -34,8 +34,17 @@ import {
   MessageSquare,
   Send,
 } from "lucide-react";
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableCell,
+  TableHead,
+} from "@/components/ui/table";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 
-const campaigns = [
+const initialCampaigns = [
   {
     id: "C-001",
     name: "Q1 Product Launch",
@@ -62,6 +71,56 @@ const campaigns = [
 
 export default function Marketing() {
   const [activeTab, setActiveTab] = useState("campaigns");
+  const [campaigns, setCampaigns] = useState(initialCampaigns);
+  const [form, setForm] = useState({
+    name: "",
+    type: "",
+    audience: "",
+    schedule: "",
+    budget: "",
+    subject: "",
+    content: "",
+    tracking: false,
+    analytics: false,
+  });
+  const [showModal, setShowModal] = useState(false);
+  const [showAnalytics, setShowAnalytics] = useState(false);
+
+  const resetForm = () => setForm({
+    name: "",
+    type: "",
+    audience: "",
+    schedule: "",
+    budget: "",
+    subject: "",
+    content: "",
+    tracking: false,
+    analytics: false,
+  });
+
+  const handleFormChange = (field: string, value: any) => {
+    setForm((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleScheduleCampaign = () => {
+    const newId = `C-${(campaigns.length + 1).toString().padStart(3, "0")}`;
+    setCampaigns([
+      ...campaigns,
+      {
+        id: newId,
+        name: form.name,
+        type: form.type ? form.type.charAt(0).toUpperCase() + form.type.slice(1) : "Email",
+        status: "active",
+        sent: 0,
+        opened: 0,
+        clicked: 0,
+        scheduled: form.schedule ? form.schedule.split("T")[0] : "",
+        budget: form.budget ? `$${Number(form.budget).toLocaleString()}` : "$0",
+      },
+    ]);
+    resetForm();
+    setShowModal(false);
+  };
 
   return (
     <div className="p-8 space-y-8 bg-background min-h-screen">
@@ -77,16 +136,194 @@ export default function Marketing() {
           </p>
         </div>
         <div className="flex items-center space-x-3">
-          <Button variant="outline">
+          <Button variant="outline" onClick={() => setShowAnalytics(true)}>
             <BarChart3 className="w-4 h-4 mr-2" />
             Analytics
           </Button>
-          <Button>
+          <Button onClick={() => setShowModal(true)}>
             <Plus className="w-4 h-4 mr-2" />
             New Campaign
           </Button>
         </div>
       </div>
+
+      {/* Modal for New Campaign */}
+      <Dialog open={showModal} onOpenChange={setShowModal}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>New Campaign</DialogTitle>
+            <DialogDescription>
+              Create a new marketing campaign with content editor and scheduling.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="campaignName">Campaign Name</Label>
+                <Input
+                  id="campaignName"
+                  placeholder="Enter campaign name"
+                  value={form.name}
+                  onChange={e => handleFormChange("name", e.target.value)}
+                />
+              </div>
+              <div>
+                <Label htmlFor="campaignType">Campaign Type</Label>
+                <Select
+                  value={form.type}
+                  onValueChange={val => handleFormChange("type", val)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="email">Email Marketing</SelectItem>
+                    <SelectItem value="social">Social Media</SelectItem>
+                    <SelectItem value="sms">SMS Campaign</SelectItem>
+                    <SelectItem value="push">Push Notifications</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="targetAudience">Target Audience</Label>
+                <Select
+                  value={form.audience}
+                  onValueChange={val => handleFormChange("audience", val)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select audience" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Contacts</SelectItem>
+                    <SelectItem value="customers">Existing Customers</SelectItem>
+                    <SelectItem value="prospects">Prospects</SelectItem>
+                    <SelectItem value="inactive">Inactive Users</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="scheduleDate">Schedule Date</Label>
+                <Input
+                  id="scheduleDate"
+                  type="datetime-local"
+                  value={form.schedule}
+                  onChange={e => handleFormChange("schedule", e.target.value)}
+                />
+              </div>
+              <div>
+                <Label htmlFor="budget">Budget</Label>
+                <Input
+                  id="budget"
+                  placeholder="$0.00"
+                  type="number"
+                  value={form.budget}
+                  onChange={e => handleFormChange("budget", e.target.value)}
+                />
+              </div>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="subject">Subject Line</Label>
+                <Input
+                  id="subject"
+                  placeholder="Enter email subject"
+                  value={form.subject}
+                  onChange={e => handleFormChange("subject", e.target.value)}
+                />
+              </div>
+              <div>
+                <Label htmlFor="content">Content Editor</Label>
+                <Textarea
+                  id="content"
+                  placeholder="Write your campaign content here..."
+                  rows={8}
+                  value={form.content}
+                  onChange={e => handleFormChange("content", e.target.value)}
+                />
+              </div>
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  id="tracking"
+                  checked={form.tracking}
+                  onChange={e => handleFormChange("tracking", e.target.checked)}
+                />
+                <Label htmlFor="tracking">Enable click tracking</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  id="analytics"
+                  checked={form.analytics}
+                  onChange={e => handleFormChange("analytics", e.target.checked)}
+                />
+                <Label htmlFor="analytics">Enable detailed analytics</Label>
+              </div>
+            </div>
+          </div>
+          <DialogFooter className="flex justify-end space-x-3 pt-6 border-t">
+            <Button variant="outline" onClick={resetForm}>Reset</Button>
+            <Button variant="outline" onClick={() => setShowModal(false)}>Cancel</Button>
+            <Button onClick={handleScheduleCampaign} disabled={!form.name || !form.type || !form.audience || !form.schedule}>
+              <Send className="w-4 h-4 mr-2" />
+              Schedule Campaign
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal for Analytics */}
+      <Dialog open={showAnalytics} onOpenChange={setShowAnalytics}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Analytics</DialogTitle>
+            <DialogDescription>
+              View marketing campaign performance and audience engagement.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="border border-border/50 rounded bg-background">
+              <div className="p-4">
+                <h3 className="font-semibold mb-1">Campaign Performance</h3>
+                <p className="text-sm text-muted-foreground mb-2">Track campaign effectiveness over time</p>
+                <div className="h-64 bg-muted/50 rounded flex items-center justify-center">
+                  <svg width="90%" height="80%" viewBox="0 0 300 120">
+                    <polyline
+                      fill="none"
+                      stroke="#6366f1"
+                      strokeWidth="3"
+                      points="0,100 40,80 80,60 120,70 160,40 200,50 240,30 280,40"
+                    />
+                    <circle cx="0" cy="100" r="4" fill="#6366f1" />
+                    <circle cx="40" cy="80" r="4" fill="#6366f1" />
+                    <circle cx="80" cy="60" r="4" fill="#6366f1" />
+                    <circle cx="120" cy="70" r="4" fill="#6366f1" />
+                    <circle cx="160" cy="40" r="4" fill="#6366f1" />
+                    <circle cx="200" cy="50" r="4" fill="#6366f1" />
+                    <circle cx="240" cy="30" r="4" fill="#6366f1" />
+                    <circle cx="280" cy="40" r="4" fill="#6366f1" />
+                  </svg>
+                </div>
+              </div>
+            </div>
+            <div className="border border-border/50 rounded bg-background">
+              <div className="p-4">
+                <h3 className="font-semibold mb-1">Audience Engagement</h3>
+                <p className="text-sm text-muted-foreground mb-2">Breakdown of user interactions</p>
+                <div className="h-64 bg-muted/50 rounded flex items-center justify-center">
+                  <svg width="120" height="120" viewBox="0 0 120 120">
+                    <circle r="50" cx="60" cy="60" fill="#e5e7eb" />
+                    <path d="M60 60 L60 10 A50 50 0 0 1 110 60 Z" fill="#6366f1" />
+                    <path d="M60 60 L110 60 A50 50 0 0 1 60 110 Z" fill="#22d3ee" />
+                    <path d="M60 60 L60 110 A50 50 0 0 1 10 60 Z" fill="#f59e42" />
+                    <path d="M60 60 L10 60 A50 50 0 0 1 60 10 Z" fill="#a3e635" />
+                  </svg>
+                </div>
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Marketing Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -118,10 +355,8 @@ export default function Marketing() {
         onValueChange={setActiveTab}
         className="space-y-6"
       >
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-1">
           <TabsTrigger value="campaigns">Campaigns</TabsTrigger>
-          <TabsTrigger value="builder">Campaign Builder</TabsTrigger>
-          <TabsTrigger value="analytics">Analytics</TabsTrigger>
         </TabsList>
 
         {/* Campaign List */}
@@ -134,226 +369,62 @@ export default function Marketing() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                {campaigns.map((campaign) => (
-                  <div
-                    key={campaign.id}
-                    className="p-4 rounded-lg border border-border/50 hover:bg-muted/50 transition-colors"
-                  >
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center space-x-3">
-                        <h3 className="font-semibold text-foreground">
-                          {campaign.name}
-                        </h3>
-                        <Badge
-                          variant={
-                            campaign.status === "active"
-                              ? "default"
-                              : "secondary"
-                          }
-                        >
-                          {campaign.status}
-                        </Badge>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>ID</TableHead>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Type</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Sent</TableHead>
+                    <TableHead>Opened</TableHead>
+                    <TableHead>Clicked</TableHead>
+                    <TableHead>Scheduled</TableHead>
+                    <TableHead>Budget</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {campaigns.map((campaign) => (
+                    <TableRow key={campaign.id}>
+                      <TableCell>{campaign.id}</TableCell>
+                      <TableCell>{campaign.name}</TableCell>
+                      <TableCell>
                         <Badge variant="outline">{campaign.type}</Badge>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Button variant="ghost" size="sm">
-                          <Eye className="w-4 h-4" />
-                        </Button>
-                        <Button variant="ghost" size="sm">
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                        {campaign.status === "active" ? (
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={campaign.status === "active" ? "default" : "secondary"}>{campaign.status}</Badge>
+                      </TableCell>
+                      <TableCell>{campaign.sent.toLocaleString()}</TableCell>
+                      <TableCell>{campaign.opened.toLocaleString()}</TableCell>
+                      <TableCell>{campaign.clicked.toLocaleString()}</TableCell>
+                      <TableCell>{campaign.scheduled}</TableCell>
+                      <TableCell>{campaign.budget}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center space-x-2">
                           <Button variant="ghost" size="sm">
-                            <Pause className="w-4 h-4" />
+                            <Eye className="w-4 h-4" />
                           </Button>
-                        ) : (
                           <Button variant="ghost" size="sm">
-                            <Play className="w-4 h-4" />
+                            <Edit className="w-4 h-4" />
                           </Button>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-sm">
-                      <div>
-                        <p className="text-muted-foreground">Sent</p>
-                        <p className="font-medium">
-                          {campaign.sent.toLocaleString()}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-muted-foreground">Opened</p>
-                        <p className="font-medium">
-                          {campaign.opened.toLocaleString()}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-muted-foreground">Clicked</p>
-                        <p className="font-medium">
-                          {campaign.clicked.toLocaleString()}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-muted-foreground">Scheduled</p>
-                        <p className="font-medium">{campaign.scheduled}</p>
-                      </div>
-                      <div>
-                        <p className="text-muted-foreground">Budget</p>
-                        <p className="font-medium">{campaign.budget}</p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
+                          {campaign.status === "active" ? (
+                            <Button variant="ghost" size="sm">
+                              <Pause className="w-4 h-4" />
+                            </Button>
+                          ) : (
+                            <Button variant="ghost" size="sm">
+                              <Play className="w-4 h-4" />
+                            </Button>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             </CardContent>
           </Card>
-        </TabsContent>
-
-        {/* Campaign Builder */}
-        <TabsContent value="builder" className="space-y-6">
-          <Card className="border border-border/50">
-            <CardHeader>
-              <CardTitle>Campaign Builder</CardTitle>
-              <CardDescription>
-                Create new marketing campaigns with content editor and
-                scheduling
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="campaignName">Campaign Name</Label>
-                    <Input
-                      id="campaignName"
-                      placeholder="Enter campaign name"
-                    />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="campaignType">Campaign Type</Label>
-                    <Select>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="email">Email Marketing</SelectItem>
-                        <SelectItem value="social">Social Media</SelectItem>
-                        <SelectItem value="sms">SMS Campaign</SelectItem>
-                        <SelectItem value="push">Push Notifications</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div>
-                    <Label htmlFor="targetAudience">Target Audience</Label>
-                    <Select>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select audience" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Contacts</SelectItem>
-                        <SelectItem value="customers">
-                          Existing Customers
-                        </SelectItem>
-                        <SelectItem value="prospects">Prospects</SelectItem>
-                        <SelectItem value="inactive">Inactive Users</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div>
-                    <Label htmlFor="scheduleDate">Schedule Date</Label>
-                    <Input id="scheduleDate" type="datetime-local" />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="budget">Budget</Label>
-                    <Input id="budget" placeholder="$0.00" type="number" />
-                  </div>
-                </div>
-
-                <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="subject">Subject Line</Label>
-                    <Input id="subject" placeholder="Enter email subject" />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="content">Content Editor</Label>
-                    <Textarea
-                      id="content"
-                      placeholder="Write your campaign content here..."
-                      rows={8}
-                    />
-                  </div>
-
-                  <div className="flex items-center space-x-2">
-                    <input type="checkbox" id="tracking" />
-                    <Label htmlFor="tracking">Enable click tracking</Label>
-                  </div>
-
-                  <div className="flex items-center space-x-2">
-                    <input type="checkbox" id="analytics" />
-                    <Label htmlFor="analytics">Enable detailed analytics</Label>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex justify-end space-x-3 pt-6 border-t">
-                <Button variant="outline">Save Draft</Button>
-                <Button variant="outline">Preview</Button>
-                <Button>
-                  <Send className="w-4 h-4 mr-2" />
-                  Schedule Campaign
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Analytics */}
-        <TabsContent value="analytics" className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card className="border border-border/50">
-              <CardHeader>
-                <CardTitle>Campaign Performance</CardTitle>
-                <CardDescription>
-                  Track campaign effectiveness over time
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="h-64 bg-muted/50 rounded flex items-center justify-center">
-                  <div className="text-center">
-                    <BarChart3 className="w-12 h-12 text-primary mx-auto mb-2" />
-                    <p className="text-muted-foreground">
-                      Line Chart: Campaign Performance
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="border border-border/50">
-              <CardHeader>
-                <CardTitle>Audience Engagement</CardTitle>
-                <CardDescription>
-                  Breakdown of user interactions
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="h-64 bg-muted/50 rounded flex items-center justify-center">
-                  <div className="text-center">
-                    <Users className="w-12 h-12 text-primary mx-auto mb-2" />
-                    <p className="text-muted-foreground">
-                      Donut Chart: Engagement Metrics
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
         </TabsContent>
       </Tabs>
     </div>
