@@ -26,7 +26,7 @@ const features = [
     icon: Zap,
     title: "Intelligent Workflow Automation",
     description:
-      "AI-powered workflow management that streamlines your repair processes from intake to completion.",
+      "AI-powered workflow management that streamlines your processes from intake to completion.",
     color: "text-blue-600",
   },
   {
@@ -70,7 +70,7 @@ const workflowSteps = [
   {
     step: 1,
     title: "Job Intake",
-    description: "Customer submits repair request with device details",
+    description: "Customer submits request with device details",
     icon: Package,
     color: "bg-blue-500",
   },
@@ -83,7 +83,7 @@ const workflowSteps = [
   },
   {
     step: 3,
-    title: "Repair Process",
+    title: "Request Process",
     description: "Professional repair with quality tracking",
     icon: Wrench,
     color: "bg-orange-500",
@@ -103,7 +103,7 @@ const testimonials = [
     role: "Operations Manager",
     company: "TechFix Solutions",
     content:
-      "NeuraCRM transformed our repair workflow. We've seen a 40% increase in efficiency and our customers love the transparency.",
+      "NeuraCRM transformed our workflow. We've seen a 40% increase in efficiency and our customers love the transparency.",
     rating: 5,
   },
   {
@@ -125,7 +125,7 @@ const testimonials = [
 ];
 
 const stats = [
-  { value: "10,000+", label: "Repairs Processed" },
+  { value: "10,000+", label: "Request Processed" },
   { value: "99.9%", label: "Uptime Guarantee" },
   { value: "50+", label: "Happy Businesses" },
   { value: "24/7", label: "Support Available" },
@@ -138,18 +138,22 @@ export default function Landing() {
       <nav className="border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-3">
-              <div className="w-8 h-8 rounded-lg flex items-center justify-center">
-                <img
-                  src="https://cdn.builder.io/api/v1/assets/9f16d040d92d49b8a8434e2ea64b576d/lopo-bad227?format=webp&width=800"
-                  alt="NeuraCRM Logo"
-                  className="w-8 h-8 rounded-lg"
-                />
-              </div>
-              <div>
-                <h1 className="text-xl font-bold text-foreground">NeuraCRM</h1>
-              </div>
-            </div>
+            <Link to="/">
+                <div className="flex items-center space-x-3">
+                  <div className="w-8 h-8 rounded-lg flex items-center justify-center">
+                    <img
+                      src="https://cdn.builder.io/api/v1/assets/9f16d040d92d49b8a8434e2ea64b576d/lopo-bad227?format=webp&width=800"
+                      alt="NeuraCRM Logo"
+                      className="w-8 h-8 rounded-lg"
+                    />
+                  </div>
+                  <div>
+                    <h1 className="text-xl font-bold text-foreground">
+                      NeuraCRM
+                    </h1>
+                  </div>
+                </div>
+              </Link>
             <div className="hidden md:flex items-center space-x-8">
               <a
                 href="#features"
@@ -163,12 +167,7 @@ export default function Landing() {
               >
                 Testimonials
               </a>
-              <a
-                href="#pricing"
-                className="text-muted-foreground hover:text-foreground transition-colors"
-              >
-                Pricing
-              </a>
+              <Link to="/pricing">Pricing</Link>
             </div>
             <div className="flex items-center space-x-4">
               <Link to="/login">
@@ -194,9 +193,9 @@ export default function Landing() {
               Intelligent Workflows
             </h1>
             <p className="text-xl text-muted-foreground mb-8 max-w-3xl mx-auto">
-              NeuraCRM streamlines your entire repair process from customer
-              intake to completion with AI-powered workflow automation,
-              real-time tracking, and comprehensive analytics.
+              NeuraCRM streamlines your entire process from customer intake to
+              completion with AI-powered workflow automation, real-time
+              tracking, and comprehensive analytics.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-4">
               <Link to="/signup">
@@ -262,7 +261,7 @@ export default function Landing() {
               Everything You Need to Scale Your Business
             </h2>
             <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-              Comprehensive tools and features designed specifically for repair
+              Comprehensive tools and features designed specifically for
               shops and service centers of all sizes.
             </p>
           </div>
@@ -287,7 +286,7 @@ export default function Landing() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-3xl sm:text-4xl font-bold text-foreground mb-4">
-              Loved by Repair Professionals
+              Loved by Professionals
             </h2>
             <p className="text-xl text-muted-foreground">
               See what our customers have to say about NeuraCRM
@@ -331,11 +330,11 @@ export default function Landing() {
           <Card className="border border-border/50 bg-gradient-to-r from-primary/5 via-background to-accent/5">
             <CardContent className="p-12 text-center">
               <h2 className="text-3xl sm:text-4xl font-bold text-foreground mb-4">
-                Ready to Transform Your Repair Business?
+                Ready to Transform Your Business?
               </h2>
               <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-                Join thousands of repair professionals who trust NeuraCRM to
-                streamline their operations and delight their customers.
+                Join thousands of professionals who trust NeuraCRM to streamline
+                their operations and delight their customers.
               </p>
               <div className="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-4">
                 <Link to="/signup">
@@ -380,7 +379,7 @@ export default function Landing() {
                 </div>
               </div>
               <p className="text-sm text-muted-foreground">
-                Empowering repair businesses with intelligent workflow
+                Empowering businesses with intelligent workflow
                 automation and comprehensive management tools.
               </p>
             </div>

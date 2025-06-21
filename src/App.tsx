@@ -33,6 +33,7 @@ import Chat from "./pages/Chat";
 import VoIP from "./pages/VoIP";
 import Automation from "./pages/Automation";
 import { LeadsProvider } from "./context/LeadsContext";
+import Pricing from "./pages/Pricing";
 
 const queryClient = new QueryClient();
 
@@ -310,7 +311,7 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
-
+              <Route path="/pricing" element={<Pricing />} />
             {/* Catch-all route */}
             <Route path="*" element={<NotFound />} />
           </Routes>
