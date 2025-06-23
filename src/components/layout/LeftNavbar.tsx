@@ -41,7 +41,7 @@ export default function LeftNavbar({ navigation, onDelete }: LeftNavbarProps) {
   return (
     <div
       className={cn(
-        "flex flex-col bg-sidebar border-r border-sidebar-border transition-all duration-300 ease-in-out h-screen",
+        "flex flex-col sidebar-bg border-r border-sidebar-border transition-all duration-300 ease-in-out h-screen",
         isHovered ? "w-48" : "w-16",
       )}
       onMouseEnter={() => setIsHovered(true)}
@@ -98,7 +98,7 @@ export default function LeftNavbar({ navigation, onDelete }: LeftNavbarProps) {
                 title={!isHovered ? item.name : ""}
               >
                 <item.icon
-                  className={cn("w-5 h-5 flex-shrink-0", isHovered && "mr-3")}
+                  className={cn("w-5 h-5 flex-shrink-0 sidebar-icon-color", isHovered && "mr-3")}
                 />
                 {isHovered && (
                   <span className="whitespace-nowrap overflow-hidden">
@@ -133,7 +133,86 @@ export default function LeftNavbar({ navigation, onDelete }: LeftNavbarProps) {
 
       {/* Bottom Section */}
       <div className="px-4 py-4 border-t border-sidebar-border">
-        {/* User Profile */}
+
+        <Button  style={{ marginBottom: '20px'}}
+            variant={isEditMode ? "default" : "ghost"}
+            onClick={() => setIsEditMode((v) => !v)}
+            className={cn(
+              "w-full transition-all group relative",
+              isHovered ? "justify-start" : "justify-center px-2 hover:bg-white/10",
+              isEditMode ? "bg-blue-500 text-white" : "text-sidebar-foreground/60"
+            )}
+            title={!isHovered ? "Edit Navigation" : ""}
+          >
+            <Pencil className={cn("w-4 h-4", isHovered && "mr-2")} />
+            {isHovered && <span>Edit</span>}
+          </Button>
+
+            {/* Settings Item */}
+        {settingsItem && (
+          <div className="mb-4">
+            <Link
+              to={settingsItem.href}
+              className={cn(
+                "flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-colors group relative",
+                location.pathname === settingsItem.href
+                  ? "text-sidebar-primary-foreground hover:bg-white/10"
+                  : "text-sidebar-foreground hover:bg-sidebar-accent",
+                isHovered ? "justify-start" : "justify-center",
+              )}
+              title={!isHovered ? settingsItem.name : ""}
+            >
+               <svg
+        xmlns="http://www.w3.org/2000/svg"
+        className={cn("w-5 h-5 flex-shrink-0 sidebar-icon-color fill-current", isHovered && "mr-3")}
+        viewBox="0 0 24 24"
+        fill="currentColor"
+      >
+        <path
+          fillRule="evenodd"
+          d="M11.983 13.94a1.96 1.96 0 1 0 0-3.92 1.96 1.96 0 0 0 0 3.92Zm9.164-1.96a7.208 7.208 0 0 1-.12 1.29l2.012 1.574a.48.48 0 0 1 .11.61l-1.9 3.29a.48.48 0 0 1-.58.22l-2.368-.952a7.354 7.354 0 0 1-1.1.65l-.358 2.49a.48.48 0 0 1-.474.4h-3.8a.48.48 0 0 1-.474-.4l-.358-2.49a7.316 7.316 0 0 1-1.1-.65l-2.367.952a.48.48 0 0 1-.58-.22l-1.9-3.29a.48.48 0 0 1 .11-.61l2.012-1.574a7.208 7.208 0 0 1 0-2.58l-2.012-1.574a.48.48 0 0 1-.11-.61l1.9-3.29a.48.48 0 0 1 .58-.22l2.367.952c.35-.26.72-.48 1.1-.65l.358-2.49a.48.48 0 0 1 .474-.4h3.8c.24 0 .442.17.474.4l.358 2.49c.38.17.75.39 1.1.65l2.368-.952a.48.48 0 0 1 .58.22l1.9 3.29a.48.48 0 0 1-.11.61l-2.013 1.574c.08.42.12.85.12 1.29Zm-2.4 0a4.76 4.76 0 1 0-9.52 0 4.76 4.76 0 0 0 9.52 0Z"
+          clipRule="evenodd"
+        />
+      </svg>
+
+      {isHovered && (
+        <span className="whitespace-nowrap overflow-hidden">
+          {settingsItem.name}
+        </span>
+      )}
+            </Link>
+          </div>
+        )}
+
+        {/* Action Buttons */}
+        <div className="space-y-2 flex flex-col gap-2">
+          <Button style={{ color:'red'}}
+            variant="ghost"
+            onClick={handleLogout}
+            className={cn(
+              "w-full transition-all group relative text-red hover:text-white hover:bg-white/10",
+              isHovered ? "justify-start" : "justify-center px-2",
+            )}
+            title={!isHovered ? "Sign Out" : ""}
+          >
+            <LogOut className={cn("w-4 h-4 sidebar-icon-color", isHovered && "mr-2")} />
+            {isHovered && <span className="text-white">Sign Out</span>}
+
+            {/* Tooltip for collapsed state */}
+            {!isHovered && (
+              <div className="absolute left-full ml-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap z-50 pointer-events-none">
+                Sign Out
+              </div>
+            )}
+          </Button>
+          {/* Edit Mode Toggle Button */}
+          
+        </div>
+
+      
+      </div>
+
+ {/* User Profile */}
         <div
           className={cn(
             "flex items-center mb-4",
@@ -158,73 +237,12 @@ export default function LeftNavbar({ navigation, onDelete }: LeftNavbarProps) {
                 size="icon"
                 className="w-8 h-8 text-sidebar-foreground/60"
               >
-                <Bell className="w-4 h-4" />
+                <Bell className="w-4 h-4 sidebar-icon-color" />
               </Button>
             </>
           )}
         </div>
 
-        {/* Action Buttons */}
-        <div className="space-y-2 flex flex-col gap-2">
-          <Button
-            variant="ghost"
-            onClick={handleLogout}
-            className={cn(
-              "w-full transition-all group relative text-white hover:text-white hover:bg-white/10",
-              isHovered ? "justify-start" : "justify-center px-2",
-            )}
-            title={!isHovered ? "Sign Out" : ""}
-          >
-            <LogOut className={cn("w-4 h-4 text-white", isHovered && "mr-2")} />
-            {isHovered && <span className="text-white">Sign Out</span>}
-
-            {/* Tooltip for collapsed state */}
-            {!isHovered && (
-              <div className="absolute left-full ml-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap z-50 pointer-events-none">
-                Sign Out
-              </div>
-            )}
-          </Button>
-          {/* Edit Mode Toggle Button */}
-          <Button
-            variant={isEditMode ? "default" : "ghost"}
-            onClick={() => setIsEditMode((v) => !v)}
-            className={cn(
-              "w-full transition-all group relative",
-              isHovered ? "justify-start" : "justify-center px-2",
-              isEditMode ? "bg-blue-500 text-white" : "text-sidebar-foreground/60"
-            )}
-            title={!isHovered ? "Edit Navigation" : ""}
-          >
-            <Pencil className={cn("w-4 h-4", isHovered && "mr-2")} />
-            {isHovered && <span>Edit</span>}
-          </Button>
-        </div>
-
-        {/* Settings Item (always visible, not deletable) */}
-        {settingsItem && (
-          <div className="mb-4">
-            <Link
-              to={settingsItem.href}
-              className={cn(
-                "flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-colors group relative",
-                location.pathname === settingsItem.href
-                  ? "bg-sidebar-primary text-sidebar-primary-foreground"
-                  : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-                isHovered ? "justify-start" : "justify-center",
-              )}
-              title={!isHovered ? settingsItem.name : ""}
-            >
-              <settingsItem.icon className={cn("w-5 h-5 flex-shrink-0", isHovered && "mr-3")} />
-              {isHovered && (
-                <span className="whitespace-nowrap overflow-hidden">
-                  {settingsItem.name}
-                </span>
-              )}
-            </Link>
-          </div>
-        )}
-      </div>
     </div>
   );
 }

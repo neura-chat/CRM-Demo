@@ -13,7 +13,7 @@
     --popover: 0 0% 100%;
     --popover-foreground: 220 87% 4%;
 
-    --primary: 217 91% 60%;
+    --primary: #3b82f6;
     --primary-foreground: 220 26% 98%;
 
     --secondary: 220 14% 96%;
@@ -42,6 +42,10 @@
     --sidebar-accent-foreground: 220 26% 98%;
     --sidebar-border: 221 39% 15%;
     --sidebar-ring: 217 91% 60%;
+
+    --font-size-base: 16px;
+    --sidebar-bg: #1e293b;
+    --sidebar-icon-color: #94a3b8;
   }
 
   .dark {
@@ -91,5 +95,30 @@
 
   body {
     @apply bg-background text-foreground;
+  }
+
+  .bg-primary {
+    background-color: var(--primary) !important;
+  }
+  .text-primary {
+    color: var(--primary) !important;
+  }
+  .border-primary {
+    border-color: var(--primary) !important;
+  }
+
+  html {
+    font-size: var(--font-size-base);
+  }
+
+  .text-base {
+    font-size: var(--font-size-base) !important;
+  }
+
+  .sidebar-bg {
+    background-color: var(--sidebar-bg) !important;
+  }
+  .sidebar-icon-color {
+    color: var(--sidebar-icon-color) !important;
   }
 }

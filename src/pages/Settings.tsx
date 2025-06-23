@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Card,
   CardContent,
@@ -83,10 +83,55 @@ const apiKeys = [
   },
 ];
 
+const presetColors = [
+  { value: "blue", label: "Blue", hex: "#3b82f6" },
+  { value: "purple", label: "Purple", hex: "#a21caf" },
+  { value: "green", label: "Green", hex: "#22c55e" },
+  { value: "orange", label: "Orange", hex: "#f59e42" },
+  { value: "custom", label: "Custom", hex: "" },
+];
+
 export default function Settings() {
   const [activeTab, setActiveTab] = useState("user");
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [showApiKey, setShowApiKey] = useState<string | null>(null);
+  const [primaryColor, setPrimaryColor] = useState("blue");
+  const [customColor, setCustomColor] = useState("#3b82f6");
+  const [fontSize, setFontSize] = useState("medium");
+  const [sidebarBg, setSidebarBg] = useState("#1e293b");
+  const [sidebarIconColor, setSidebarIconColor] = useState("#94a3b8");
+
+  useEffect(() => {
+    if (isDarkMode) {
+      document.documentElement.classList.add("dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+    }
+  }, [isDarkMode]);
+
+  useEffect(() => {
+    if (primaryColor === "custom") {
+      document.documentElement.style.setProperty("--primary", customColor);
+    } else {
+      const preset = presetColors.find((c) => c.value === primaryColor);
+      document.documentElement.style.setProperty("--primary", preset?.hex || "#3b82f6");
+    }
+  }, [primaryColor, customColor]);
+
+  useEffect(() => {
+    let size = "16px";
+    if (fontSize === "small") size = "14px";
+    if (fontSize === "large") size = "18px";
+    document.documentElement.style.setProperty("--font-size-base", size);
+  }, [fontSize]);
+
+  useEffect(() => {
+    document.documentElement.style.setProperty("--sidebar-bg", sidebarBg);
+  }, [sidebarBg]);
+
+  useEffect(() => {
+    document.documentElement.style.setProperty("--sidebar-icon-color", sidebarIconColor);
+  }, [sidebarIconColor]);
 
   return (
     <div className="p-8 space-y-8 bg-background min-h-screen">
@@ -469,22 +514,35 @@ export default function Settings() {
 
                 <div>
                   <Label htmlFor="primaryColor">Primary Color</Label>
-                  <Select defaultValue="blue">
+                  <Select value={primaryColor} onValueChange={setPrimaryColor}>
                     <SelectTrigger className="w-48">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="blue">Blue</SelectItem>
-                      <SelectItem value="purple">Purple</SelectItem>
-                      <SelectItem value="green">Green</SelectItem>
-                      <SelectItem value="orange">Orange</SelectItem>
+                      {presetColors.map((color) => (
+                        <SelectItem key={color.value} value={color.value}>
+                          {color.label}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
+                  {primaryColor === "custom" && (
+                    <div className="mt-2 flex items-center space-x-2">
+                      <input
+                        type="color"
+                        value={customColor}
+                        onChange={(e) => setCustomColor(e.target.value)}
+                        className="w-8 h-8 border rounded"
+                        aria-label="Pick custom color"
+                      />
+                      <span className="text-xs">{customColor}</span>
+                    </div>
+                  )}
                 </div>
 
                 <div>
                   <Label htmlFor="fontSize">Font Size</Label>
-                  <Select defaultValue="medium">
+                  <Select value={fontSize} onValueChange={setFontSize}>
                     <SelectTrigger className="w-48">
                       <SelectValue />
                     </SelectTrigger>
@@ -514,6 +572,36 @@ export default function Settings() {
                     </p>
                   </div>
                   <Switch defaultChecked />
+                </div>
+
+                {/* Sidebar Appearance Settings */}
+                <div>
+                  <Label htmlFor="sidebarBg">Sidebar Background</Label>
+                  <div className="flex items-center space-x-2 mt-1">
+                    <input
+                      type="color"
+                      id="sidebarBg"
+                      value={sidebarBg}
+                      onChange={e => setSidebarBg(e.target.value)}
+                      className="w-8 h-8 border rounded"
+                      aria-label="Pick sidebar background color"
+                    />
+                    <span className="text-xs">{sidebarBg}</span>
+                  </div>
+                </div>
+                <div>
+                  <Label htmlFor="sidebarIconColor">Sidebar Icon Color</Label>
+                  <div className="flex items-center space-x-2 mt-1">
+                    <input
+                      type="color"
+                      id="sidebarIconColor"
+                      value={sidebarIconColor}
+                      onChange={e => setSidebarIconColor(e.target.value)}
+                      className="w-8 h-8 border rounded"
+                      aria-label="Pick sidebar icon color"
+                    />
+                    <span className="text-xs">{sidebarIconColor}</span>
+                  </div>
                 </div>
               </div>
             </CardContent>

@@ -1,6 +1,8 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { OutlinedInput, InputAdornment } from '@mui/material';
+import SearchIcon from '@mui/icons-material/Search';
 import {
   Mail,
   MessageSquare,
@@ -163,6 +165,20 @@ export default function RightAppsPanel({ apps, onAddApp }: RightAppsPanelProps) 
           </Button>
         </div>
       </div>
+
+       <OutlinedInput
+      size="small"
+      id="search"
+      placeholder="Search…"
+      aria-label="search"
+      startAdornment={
+        <InputAdornment position="start">
+          <SearchIcon fontSize="small" />
+        </InputAdornment>
+      }
+      sx={{ width: '300', m:3 }}
+    />
+
 
       {/* Scrollable Content */}
       <div className="flex-1 overflow-y-auto">
