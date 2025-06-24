@@ -17,7 +17,9 @@ import {
   TrendingUp,
   ListChecks,
   BarChart2,
+  Target,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 const apps = [
   {
@@ -117,6 +119,14 @@ const apps = [
     status: "active",
     color: "bg-yellow-500",
   },
+  {
+    name: "Opportunities",
+    icon: Target,
+    description: "Manage your sales pipeline",
+    count: 2,
+    status: "active",
+    color: "bg-teal-600",
+  },
 ];
 
 const recentActivities = [
@@ -152,6 +162,7 @@ interface RightAppsPanelProps {
 }
 
 export default function RightAppsPanel({ apps, onAddApp }: RightAppsPanelProps) {
+  const navigate = useNavigate();
   // Only show apps that are not in the left navbar
   const filteredApps = apps;
   return (
@@ -189,6 +200,16 @@ export default function RightAppsPanel({ apps, onAddApp }: RightAppsPanelProps) 
               <Card
                 key={app.name}
                 className="cursor-pointer hover:shadow-md transition-shadow border border-border/50 h-full flex flex-col justify-between"
+                onClick={() => {
+                  if (app.href) {
+                    // For Opportunities, pass state to open the Opportunities tab
+                    if (app.name === "Opportunities") {
+                      navigate(app.href + "?tab=opportunities");
+                    } else {
+                      navigate(app.href);
+                    }
+                  }
+                }}
               >
                 <CardContent className="p-3">
                   <div className="flex items-center space-x-2 mb-1">

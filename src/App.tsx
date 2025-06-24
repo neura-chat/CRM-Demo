@@ -34,6 +34,7 @@ import VoIP from "./pages/VoIP";
 import Automation from "./pages/Automation";
 import { LeadsProvider } from "./context/LeadsContext";
 import Pricing from "./pages/Pricing";
+import Opportunities from "./pages/Opportunities";
 
 const queryClient = new QueryClient();
 
@@ -311,7 +312,17 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
-              <Route path="/pricing" element={<Pricing />} />
+            <Route path="/pricing" element={<Pricing />} />
+            <Route
+              path="/opportunities"
+              element={
+                <ProtectedRoute>
+                  <CrmLayout>
+                    <Opportunities />
+                  </CrmLayout>
+                </ProtectedRoute>
+              }
+            />
             {/* Catch-all route */}
             <Route path="*" element={<NotFound />} />
           </Routes>

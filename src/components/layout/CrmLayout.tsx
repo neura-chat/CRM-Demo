@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import LeftNavbar from "./LeftNavbar";
 import RightAppsPanel from "./RightAppsPanel";
 import AIAssistantPanel from "./AIAssistantPanel";
-import { Bot, Menu, X, Grid3X3 } from "lucide-react";
+import { Bot, Menu, X, Grid3X3, Target } from "lucide-react";
 import {
   Mail,
   MessageSquare,
@@ -122,6 +122,15 @@ const initialApps = [
     status: "active",
     color: "bg-yellow-500",
   },
+  {
+    name: "Opportunities",
+    icon: Target,
+    description: "Manage your sales pipeline",
+    href: "/opportunities",
+    count: 2,
+    status: "active",
+    color: "bg-teal-600",
+  },
 ];
 
 // Define all possible apps in one place
@@ -131,8 +140,9 @@ const allApps = [
   { name: "Marketing", href: "/marketing", icon: BarChart2, description: "Marketing campaigns", color: "bg-pink-700", count: 0, status: "active" },
   { name: "Companies", href: "/companies", icon: Building2, description: "Manage companies", color: "bg-cyan-600", count: 0, status: "active" },
   { name: "Settings", href: "/settings", icon: Zap, description: "App settings", color: "bg-gray-400", count: 0, status: "active" },
+  { name: "Opportunities", href: "/opportunities", icon: Target, description: "Manage your sales pipeline", color: "bg-teal-600", count: 2, status: "active" },
   // All initialApps (excluding duplicates)
-  ...initialApps.filter(app => !["Dashboard", "Sales", "Marketing", "Companies", "Settings"].includes(app.name)),
+  ...initialApps.filter(app => !["Dashboard", "Sales", "Marketing", "Companies", "Settings", "Opportunities"].includes(app.name)),
 ];
 
 export default function CrmLayout({ children }: CrmLayoutProps) {
