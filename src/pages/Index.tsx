@@ -24,6 +24,9 @@ import {
   MoreHorizontal,
   FileText,
   X,
+  Ticket,
+  ActivitySquare,
+  MessageCircle,
 } from "lucide-react";
 import { useState } from "react";
 import { StatsWidget } from "./widgets/StatsWidget";
@@ -31,6 +34,8 @@ import { DealsWidget } from "./widgets/DealsWidget";
 import { TasksWidget } from "./widgets/TasksWidget";
 import { ActivitiesWidget } from "./widgets/ActivitiesWidget";
 import { DragDropContext, Droppable, Draggable, DropResult } from "react-beautiful-dnd";
+import WidgetLibrary, { WidgetLibraryWidget as BaseWidgetLibraryWidget } from "./widgets/WidgetLibrary";
+import { toast } from "@/components/ui/use-toast";
 
 // Type definitions for widget data
 import type { Stat } from "./widgets/StatsWidget";
@@ -38,12 +43,19 @@ import type { Deal } from "./widgets/DealsWidget";
 import type { Task } from "./widgets/TasksWidget";
 import type { Activity } from "./widgets/ActivitiesWidget";
 
-const ALL_WIDGETS = [
-  { id: "stats", title: "Key Metrics", component: StatsWidget, gridSize: 2 },
-  { id: "deals", title: "Pipeline Overview", component: DealsWidget, gridSize: 1 },
-  { id: "tasks", title: "Today's Tasks", component: TasksWidget, gridSize: 1 },
-  { id: "activities", title: "Recent Activities", component: ActivitiesWidget, gridSize: 2 },
-  // Add more widgets here
+type WidgetLibraryWidget = BaseWidgetLibraryWidget & {
+  isFeatured?: boolean;
+};
+
+const ALL_WIDGETS: WidgetLibraryWidget[] = [
+  { id: "stats", title: "Total Contacts", icon: Users, description: "Display total contact count with growth metrics", size: "small", section: "KPI", isFeatured: true },
+  { id: "deals", title: "Deals Closed", icon: Target, description: "Show closed deals with conversion rate", size: "small", section: "KPI", isFeatured: true },
+  { id: "revenue", title: "Revenue", icon: DollarSign, description: "Display total revenue with growth indicators", size: "small", section: "KPI", isFeatured: true },
+  { id: "tickets", title: "Open Tickets", icon: Ticket, description: "Show open support tickets count", size: "small", section: "KPI", isFeatured: true },
+  { id: "activities", title: "Recent Activity", icon: ActivitySquare, description: "Timeline of recent CRM activities and updates", size: "medium", section: "Activity", isFeatured: true },
+  { id: "interactions", title: "Recent Interactions", icon: MessageCircle, description: "Latest customer interactions and communications", size: "medium", section: "Activity", isFeatured: true },
+  { id: "notes", title: "Notes", icon: FileText, description: "Quick notes for your day", size: "medium", section: "Action", isFeatured: true },
+  // Add more widgets as needed
 ];
 
 const stats: Stat[] = [
@@ -189,6 +201,20 @@ const activities: Activity[] = [
   },
 ];
 
+function NotesWidget() {
+  return (
+    <Card className="border border-border/50 p-2">
+      <CardHeader className="py-2 px-3">
+        <CardTitle className="text-base">Notes</CardTitle>
+        <CardDescription className="text-xs">Quick notes for your day</CardDescription>
+      </CardHeader>
+      <CardContent className="py-2 px-3">
+        <div className="text-xs text-muted-foreground">You can jot down reminders, ideas, or anything important here.</div>
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function Index() {
   const currentTime = new Date().toLocaleTimeString([], {
     hour: "2-digit",
@@ -201,8 +227,9 @@ export default function Index() {
     day: "numeric",
   });
 
-  const [activeWidgets, setActiveWidgets] = useState(["stats", "deals", "tasks", "activities"]);
+  const [activeWidgets, setActiveWidgets] = useState<string[]>(["stats", "deals", "activities"]);
   const [showAddDropdown, setShowAddDropdown] = useState(false);
+  const [showWidgetLibrary, setShowWidgetLibrary] = useState(false);
 
   function handleDragEnd(result: DropResult) {
     if (!result.destination) return;
@@ -218,13 +245,54 @@ export default function Index() {
 
   function handleAddWidget(id: string) {
     setActiveWidgets((prev) => [...prev, id]);
+    const widget = ALL_WIDGETS.find(w => w.id === id);
+    toast({
+      title: "Widget added",
+      description: widget ? widget.title : id,
+    });
     setShowAddDropdown(false);
   }
 
   const availableWidgets = ALL_WIDGETS.filter(w => !activeWidgets.includes(w.id));
 
+  const featuredWidgets = activeWidgets
+    .map((id) => ALL_WIDGETS.find((w) => w.id === id))
+    .filter((w) => w && w.isFeatured);
+  const regularWidgets = activeWidgets
+    .map((id) => ALL_WIDGETS.find((w) => w.id === id))
+    .filter((w) => w && !w.isFeatured);
+
+  console.log('Available widgets:', availableWidgets);
+
   return (
     <div className="p-8 space-y-8 bg-background min-h-screen">
+      {/* Temporary button to open Widget Library */}
+      <div className="flex justify-end p-4">
+        <Button type="button" variant="outline" onClick={() => setShowWidgetLibrary(true)}>
+          Open Widget Library
+        </Button>
+      </div>
+      {showWidgetLibrary && (
+        <div className="fixed inset-0 z-50 bg-black/30 flex items-center justify-center">
+          <div className="bg-white rounded-lg shadow-lg w-full max-w-5xl relative">
+            <button
+              className="absolute top-4 right-4 text-xl text-muted-foreground hover:text-foreground"
+              onClick={() => setShowWidgetLibrary(false)}
+              aria-label="Close"
+            >
+              ×
+            </button>
+            <WidgetLibrary
+              availableWidgets={availableWidgets}
+              onAddWidget={(id) => {
+                setActiveWidgets((prev) => [...prev, id]);
+                // Optionally close the modal here if you want:
+                // setShowWidgetLibrary(false);
+              }}
+            />
+          </div>
+        </div>
+      )}
       {/* Welcome Greeting */}
       <div className="flex items-center justify-between">
         <div>
@@ -241,70 +309,48 @@ export default function Index() {
             <Calendar className="w-4 h-4 mr-2" />
             This Month
           </Button>
-          <Button>
+          {/* <Button>
             <Plus className="w-4 h-4 mr-2" />
             New Deal
-          </Button>
+          </Button> */}
         </div>
       </div>
 
-      {/* Add Widget Button and Dropdown */}
-      <div className="mb-4 relative">
-        <Button
-          variant="outline"
-          onClick={() => setShowAddDropdown((v) => !v)}
-          disabled={availableWidgets.length === 0}
-        >
-          + Add Widget
-        </Button>
-        {showAddDropdown && (
-          <div className="absolute z-10 mt-2 bg-popover border border-border rounded shadow-lg min-w-[180px]">
-            {availableWidgets.map((widget) => (
-              <button
-                key={widget.id}
-                className="w-full text-left px-4 py-2 hover:bg-muted transition-colors"
-                onClick={() => handleAddWidget(widget.id)}
-              >
-                {widget.title}
-              </button>
-            ))}
-            <button
-              className="w-full text-left px-4 py-2 hover:bg-muted transition-colors border-t border-border"
-              onClick={() => {
-                // For now, just alert. You can replace this with a modal for custom widget creation.
-                setShowAddDropdown(false);
-                alert('Custom widget creation coming soon!');
-              }}
-            >
-              + Custom Widget
-            </button>
-          </div>
-        )}
-      </div>
-
-      {/* Render widgets in order with drag-and-drop */}
+      {/* Row 1: Featured widgets (full width) */}
+      {featuredWidgets.length > 0 && (
+        <div className="w-full mb-6 flex flex-col gap-6">
+          {featuredWidgets.map((widget) => {
+            let WidgetComponent = null;
+            if (widget.id === "stats") WidgetComponent = <StatsWidget stats={stats} />;
+            if (widget.id === "deals") WidgetComponent = <DealsWidget recentDeals={recentDeals} />;
+            if (widget.id === "tasks") WidgetComponent = <TasksWidget upcomingTasks={upcomingTasks} />;
+            if (widget.id === "activities") WidgetComponent = <ActivitiesWidget activities={activities} />;
+            if (widget.id === "notes") WidgetComponent = <NotesWidget />;
+            return (
+              <div key={widget.id} className="w-full">
+                {WidgetComponent}
+              </div>
+            );
+          })}
+        </div>
+      )}
+      {/* Row 2: Regular widgets in a responsive grid */}
       <DragDropContext onDragEnd={handleDragEnd}>
         <Droppable droppableId="dashboard-widgets" direction="horizontal">
           {(provided) => (
             <div
-              className="grid grid-cols-1 lg:grid-cols-2 gap-8"
+              className="grid grid-cols-[repeat(auto-fit,minmax(250px,1fr))] gap-3 gap-y-3 overflow-x-hidden auto-rows-fr"
               ref={provided.innerRef}
               {...provided.droppableProps}
             >
-              {activeWidgets.map((widgetId, index) => {
-                const widget = ALL_WIDGETS.find((w) => w.id === widgetId);
-                if (!widget) return null;
+              {regularWidgets.map((widget, index) => {
                 let WidgetComponent = null;
-                if (widget.id === "stats")
-                  WidgetComponent = <StatsWidget stats={stats} />;
-                if (widget.id === "deals")
-                  WidgetComponent = <DealsWidget recentDeals={recentDeals} />;
-                if (widget.id === "tasks")
-                  WidgetComponent = <TasksWidget upcomingTasks={upcomingTasks} />;
-                if (widget.id === "activities")
-                  WidgetComponent = <ActivitiesWidget activities={activities} />;
-                // Responsive col-span for each widget
-                const colSpan = widget.gridSize === 2 ? "col-span-1 lg:col-span-2" : "col-span-1";
+                if (widget.id === "stats") WidgetComponent = <StatsWidget stats={stats} />;
+                if (widget.id === "deals") WidgetComponent = <DealsWidget recentDeals={recentDeals} />;
+                if (widget.id === "tasks") WidgetComponent = <TasksWidget upcomingTasks={upcomingTasks} />;
+                if (widget.id === "activities") WidgetComponent = <ActivitiesWidget activities={activities} />;
+                if (widget.id === "notes") WidgetComponent = <NotesWidget />;
+                const colSpan = "col-span-1";
                 return (
                   <Draggable key={widget.id} draggableId={widget.id} index={index}>
                     {(provided, snapshot) => (
@@ -316,16 +362,15 @@ export default function Index() {
                         style={{
                           ...provided.draggableProps.style,
                           opacity: snapshot.isDragging ? 0.7 : 1,
-                          position: "relative",
                         }}
                       >
                         {/* Remove button */}
                         <button
                           onClick={() => handleRemoveWidget(widget.id)}
-                          className="absolute top-2 right-2 z-20 bg-background border border-border rounded-full p-1 hover:bg-destructive hover:text-destructive-foreground transition-colors"
+                          className="absolute top-1 right-1 z-20 bg-background border border-border rounded-full p-1 hover:bg-destructive hover:text-destructive-foreground transition-colors"
                           title="Remove widget"
                         >
-                          <X className="w-4 h-4" />
+                          <X className="w-3 h-3" />
                         </button>
                         {WidgetComponent}
                       </div>

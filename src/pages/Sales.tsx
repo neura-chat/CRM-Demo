@@ -40,12 +40,16 @@ import {
   Receipt,
   Truck,
   Trash,
+  MoreHorizontal,
+  ArrowUpRight,
 } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/components/ui/use-toast";
 import { Table, TableHeader, TableBody, TableRow, TableCell, TableHead } from "@/components/ui/table";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
+import { useLeads } from "@/context/LeadsContext";
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 
 const salesMetrics = [
   {
@@ -214,7 +218,7 @@ const initialOrders = [
 
 export default function Sales({ defaultTab = "analytics" }) {
   const [activeTab, setActiveTab] = useState(defaultTab);
-  const [leads, setLeads] = useState(initialLeads);
+  const { leads, addLead, setLeads } = useLeads();
   const [showLeadForm, setShowLeadForm] = useState(false);
   const [newLead, setNewLead] = useState({
     name: "",
@@ -227,7 +231,22 @@ export default function Sales({ defaultTab = "analytics" }) {
     owner: "",
     tags: "",
     lastContact: "today",
+    company: "",
+    title: "",
+    source: "",
+    score: "",
+    created: "",
+    updated: "",
+    notes: "",
   });
+  const [leadFilter, setLeadFilter] = useState("All Open Leads");
+  const [leadSearch, setLeadSearch] = useState("");
+  const leadFilterOptions = ["All Open Leads", "My Leads", "Qualified", "Hot", "Cold"];
+  const filteredLeads = leads.filter((lead) =>
+    lead.name.toLowerCase().includes(leadSearch.toLowerCase()) ||
+    lead.email.toLowerCase().includes(leadSearch.toLowerCase()) ||
+    lead.company?.toLowerCase().includes(leadSearch.toLowerCase())
+  );
   const [contacts, setContacts] = useState(initialContacts);
   const [showContactForm, setShowContactForm] = useState(false);
   const [newContact, setNewContact] = useState({
@@ -280,6 +299,55 @@ export default function Sales({ defaultTab = "analytics" }) {
     stock: "",
     category: "Software",
   });
+  const [contactSearch, setContactSearch] = useState("");
+  const [quoteSearch, setQuoteSearch] = useState("");
+  const [orderSearch, setOrderSearch] = useState("");
+  const [productSearch, setProductSearch] = useState("");
+  const [leadsView, setLeadsView] = useState(10);
+  const [leadsPage, setLeadsPage] = useState(1);
+  const [contactsView, setContactsView] = useState(10);
+  const [contactsPage, setContactsPage] = useState(1);
+  const [quotesView, setQuotesView] = useState(10);
+  const [quotesPage, setQuotesPage] = useState(1);
+  const [ordersView, setOrdersView] = useState(10);
+  const [ordersPage, setOrdersPage] = useState(1);
+  const [productsView, setProductsView] = useState(10);
+  const [productsPage, setProductsPage] = useState(1);
+  const [viewLead, setViewLead] = useState(null);
+  const [editLead, setEditLead] = useState(null);
+  const [showConvertModal, setShowConvertModal] = useState(false);
+  const [leadToConvert, setLeadToConvert] = useState(null);
+  const [viewContact, setViewContact] = useState(null);
+  const [editContact, setEditContact] = useState(null);
+  const [viewQuote, setViewQuote] = useState(null);
+  const [editQuote, setEditQuote] = useState(null);
+  const [viewOrder, setViewOrder] = useState(null);
+  const [editOrder, setEditOrder] = useState(null);
+  const [viewProduct, setViewProduct] = useState(null);
+  // Add delete functions for contacts, quotes, and orders
+  const handleDeleteContact = (id) => {
+    setContacts((prev) => prev.filter((c) => c.id !== id));
+    toast({ title: 'Contact deleted', description: 'Contact deleted successfully!' });
+  };
+  const handleDeleteQuote = (id) => {
+    setQuotes((prev) => prev.filter((q) => q.id !== id));
+    toast({ title: 'Quote deleted', description: 'Quote deleted successfully!' });
+  };
+  const handleDeleteOrder = (id) => {
+    setOrders((prev) => prev.filter((o) => o.id !== id));
+    toast({ title: 'Order deleted', description: 'Order deleted successfully!' });
+  };
+  // Add selection state for bulk actions
+  const [selectedLeads, setSelectedLeads] = useState([]);
+  const [selectedContacts, setSelectedContacts] = useState([]);
+  const [selectedQuotes, setSelectedQuotes] = useState([]);
+  const [selectedOrders, setSelectedOrders] = useState([]);
+  const [selectedProducts, setSelectedProducts] = useState([]);
+
+  const filteredContacts = (contacts || []).filter(c => !contactSearch || c.name.toLowerCase().includes(contactSearch.toLowerCase()) || c.email.toLowerCase().includes(contactSearch.toLowerCase()) || c.company.toLowerCase().includes(contactSearch.toLowerCase()));
+  const filteredQuotes = (quotes || []).filter(q => !quoteSearch || q.customer.toLowerCase().includes(quoteSearch.toLowerCase()));
+  const filteredOrders = (orders || []).filter(o => !orderSearch || o.customer.toLowerCase().includes(orderSearch.toLowerCase()));
+  const filteredProducts = (products || []).filter(p => !productSearch || p.name.toLowerCase().includes(productSearch.toLowerCase()));
 
   useEffect(() => {
     setActiveTab(defaultTab);
@@ -292,15 +360,23 @@ export default function Sales({ defaultTab = "analytics" }) {
 
   const handleAddLead = (e) => {
     e.preventDefault();
-    setLeads((prev) => [
-      {
-        ...newLead,
-        id: `L-${(prev.length + 1).toString().padStart(3, "0")}`,
-        tags: newLead.tags ? newLead.tags.split(",").map((t) => t.trim()) : [],
-      },
-      ...prev,
-    ]);
+    if (editLead) {
+      // Update existing lead and preserve id
+      setLeads((prev) => prev.map((l) => l.id === editLead.id ? { ...l, ...newLead, id: l.id } : l));
+      toast({
+        title: "Lead Updated",
+        description: `Lead '${newLead.name}' was updated successfully!`,
+      });
+    } else {
+      // Add new lead
+      addLead(newLead);
+      toast({
+        title: "Lead Added",
+        description: `Lead '${newLead.name}' was added successfully!`,
+      });
+    }
     setShowLeadForm(false);
+    setEditLead(null);
     setNewLead({
       name: "",
       contact: "",
@@ -312,10 +388,13 @@ export default function Sales({ defaultTab = "analytics" }) {
       owner: "",
       tags: "",
       lastContact: "today",
-    });
-    toast({
-      title: "Lead Added",
-      description: `Lead '${newLead.name}' was added successfully!`,
+      company: "",
+      title: "",
+      source: "",
+      score: "",
+      created: "",
+      updated: "",
+      notes: "",
     });
   };
 
@@ -326,18 +405,27 @@ export default function Sales({ defaultTab = "analytics" }) {
 
   const handleAddContact = (e) => {
     e.preventDefault();
-    setContacts((prev) => [
-      {
-        ...newContact,
-        id: `CT-${(prev.length + 1).toString().padStart(3, "0")}`,
-      },
-      ...prev,
-    ]);
+    if (editContact) {
+      setContacts((prev) => prev.map((c) => c.id === editContact.id ? { ...editContact, ...newContact } : c));
+      toast({
+        title: "Contact updated",
+        description: `Contact '${newContact.name}' was updated successfully!`,
+      });
+    } else {
+      setContacts((prev) => [
+        {
+          ...newContact,
+          id: `CT-${(prev.length + 1).toString().padStart(3, "0")}`,
+        },
+        ...prev,
+      ]);
+      toast({
+        title: "Contact added",
+        description: `The contact '${newContact.name}' was added successfully!`,
+      });
+    }
     setShowContactForm(false);
-    toast({
-      title: "Contact added",
-      description: `The contact '${newContact.name}' was added successfully!`,
-    });
+    setEditContact(null);
     setNewContact({
       name: "",
       title: "",
@@ -356,19 +444,28 @@ export default function Sales({ defaultTab = "analytics" }) {
 
   const handleAddQuote = (e) => {
     e.preventDefault();
-    setQuotes((prev) => [
-      {
-        ...newQuote,
-        id: `Q-${(prev.length + 1).toString().padStart(3, "0")}`,
-        created: newQuote.created || new Date().toISOString().slice(0, 10),
-      },
-      ...prev,
-    ]);
+    if (editQuote) {
+      setQuotes((prev) => prev.map((q) => q.id === editQuote.id ? { ...editQuote, ...newQuote } : q));
+      toast({
+        title: "Quote updated",
+        description: `Quote for '${newQuote.customer}' was updated successfully!`,
+      });
+    } else {
+      setQuotes((prev) => [
+        {
+          ...newQuote,
+          id: `Q-${(prev.length + 1).toString().padStart(3, "0")}`,
+          created: newQuote.created || new Date().toISOString().slice(0, 10),
+        },
+        ...prev,
+      ]);
+      toast({
+        title: "Quote created",
+        description: `Quote for '${newQuote.customer}' was created successfully!`,
+      });
+    }
     setShowQuoteForm(false);
-    toast({
-      title: "Quote created",
-      description: `Quote for '${newQuote.customer}' was created successfully!`,
-    });
+    setEditQuote(null);
     setNewQuote({
       customer: "",
       amount: "",
@@ -385,19 +482,28 @@ export default function Sales({ defaultTab = "analytics" }) {
 
   const handleAddOrder = (e) => {
     e.preventDefault();
-    setOrders((prev) => [
-      {
-        ...newOrder,
-        id: `O-${(prev.length + 1).toString().padStart(3, "0")}`,
-        created: newOrder.created || new Date().toISOString().slice(0, 10),
-      },
-      ...prev,
-    ]);
+    if (editOrder) {
+      setOrders((prev) => prev.map((o) => o.id === editOrder.id ? { ...editOrder, ...newOrder } : o));
+      toast({
+        title: "Order updated",
+        description: `Order for '${newOrder.customer}' was updated successfully!`,
+      });
+    } else {
+      setOrders((prev) => [
+        {
+          ...newOrder,
+          id: `O-${(prev.length + 1).toString().padStart(3, "0")}`,
+          created: newOrder.created || new Date().toISOString().slice(0, 10),
+        },
+        ...prev,
+      ]);
+      toast({
+        title: "Order created",
+        description: `Order for '${newOrder.customer}' was created successfully!`,
+      });
+    }
     setShowOrderForm(false);
-    toast({
-      title: "Order created",
-      description: `Order for '${newOrder.customer}' was created successfully!`,
-    });
+    setEditOrder(null);
     setNewOrder({
       customer: "",
       total: "",
@@ -514,6 +620,31 @@ export default function Sales({ defaultTab = "analytics" }) {
     toast({ title: "Product deleted", description: `Product deleted successfully!` });
   };
 
+  const handleDeleteLead = (id) => {
+    setLeads((prev) => prev.filter((l) => l.id !== id));
+    toast({ title: 'Lead deleted', description: 'Lead deleted successfully!' });
+  };
+
+  // Utility to close all modals
+  const resetAllModals = () => {
+    setViewLead(null);
+    setEditLead(null);
+    setShowLeadForm(false);
+    setViewContact(null);
+    setEditContact(null);
+    setShowContactForm(false);
+    setViewQuote(null);
+    setEditQuote(null);
+    setShowQuoteForm(false);
+    setViewOrder(null);
+    setEditOrder(null);
+    setShowOrderForm(false);
+    setViewProduct(null);
+    setEditingProduct(null);
+    setShowProductForm(false);
+    setShowConvertModal(false);
+  };
+
   return (
     <div className="p-8 space-y-8 bg-background min-h-screen">
       {/* Header */}
@@ -565,42 +696,6 @@ export default function Sales({ defaultTab = "analytics" }) {
             <Download className="w-4 h-4 mr-2" />
             Export
           </Button>
-          {activeTab === "leads" && (
-            <Button onClick={() => setShowLeadForm(true)}>
-              <Plus className="w-4 h-4 mr-2" />
-              New Lead
-            </Button>
-          )}
-          {activeTab === "contacts" && (
-            <Button onClick={() => setShowContactForm(true)}>
-              <Plus className="w-4 h-4 mr-2" />
-              Add Contact
-            </Button>
-          )}
-          {activeTab === "quotes" && (
-            <Button onClick={() => setShowQuoteForm(true)}>
-              <Plus className="w-4 h-4 mr-2" />
-              Create Quote
-            </Button>
-          )}
-          {activeTab === "orders" && (
-            <Button onClick={() => setShowOrderForm(true)}>
-              <Plus className="w-4 h-4 mr-2" />
-              New Order
-            </Button>
-          )}
-          {activeTab === "opportunities" && (
-            <Button onClick={() => { setShowOpportunityForm(true); setEditingOpportunity(null); }}>
-              <Plus className="w-4 h-4 mr-2" />
-              Add Opportunity
-            </Button>
-          )}
-          {activeTab === "products" && (
-            <Button onClick={() => { setShowProductForm(true); setEditingProduct(null); }}>
-              <Plus className="w-4 h-4 mr-2" />
-              Add Product
-            </Button>
-          )}
         </div>
       </div>
 
@@ -684,11 +779,65 @@ export default function Sales({ defaultTab = "analytics" }) {
 
         {/* Leads Management */}
         <TabsContent value="leads" className="space-y-6">
+          {/* Page Title and Filter Bar */}
+          <div className="flex items-center justify-between px-2 py-2">
+            <div className="flex items-center space-x-4">
+              <h1 className="text-2xl font-bold">Leads</h1>
+              <select
+                className="border rounded px-2 py-1 text-sm bg-background"
+                value={leadFilter}
+                onChange={(e) => setLeadFilter(e.target.value)}
+              >
+                {leadFilterOptions.map((opt) => (
+                  <option key={opt} value={opt}>{opt}</option>
+                ))}
+              </select>
+            </div>
+            <div className="flex items-center space-x-2">
+              <label className="text-sm text-muted-foreground">View</label>
+              <select className="border rounded px-2 py-1 text-sm" value={leadsView} onChange={e => { setLeadsView(Number(e.target.value)); setLeadsPage(1); }}>
+                {[5, 10, 20, 50].map(n => <option key={n} value={n}>{n}</option>)}
+              </select>
+              <Button variant="outline" size="sm" disabled={leadsPage === 1} onClick={() => setLeadsPage(p => Math.max(1, p - 1))}>&lt;</Button>
+              <span className="text-xs">Page {leadsPage} of {Math.max(1, Math.ceil(filteredLeads.length / leadsView))}</span>
+              <Button variant="outline" size="sm" disabled={leadsPage === Math.ceil(filteredLeads.length / leadsView) || filteredLeads.length === 0} onClick={() => setLeadsPage(p => Math.min(Math.ceil(filteredLeads.length / leadsView), p + 1))}>&gt;</Button>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search leads..."
+                  className="w-56 pl-10"
+                  value={leadSearch}
+                  onChange={(e) => setLeadSearch(e.target.value)}
+                />
+              </div>
+              <Button variant="outline">Import</Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline">Actions</Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => {
+                    setContacts(prev => prev.filter(c => !selectedContacts.includes(c.id)));
+                    setSelectedContacts([]);
+                    toast({ title: 'Contacts deleted', description: 'Selected contacts deleted successfully!' });
+                  }}>Bulk Delete</DropdownMenuItem>
+                  <DropdownMenuItem>Export Selected</DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <Button onClick={() => setShowLeadForm(true)}>
+                <Plus className="w-4 h-4 mr-2" />
+                New
+              </Button>
+            </div>
+          </div>
           {/* New Lead Modal */}
-          <Dialog open={showLeadForm} onOpenChange={setShowLeadForm}>
+          <Dialog open={showLeadForm} onOpenChange={open => { if (!open) resetAllModals(); else setShowLeadForm(true); }}>
             <DialogContent>
               <DialogHeader>
                 <DialogTitle>Add New Lead</DialogTitle>
+                <DialogDescription>
+                  Enter details for a new lead.
+                </DialogDescription>
               </DialogHeader>
               <form onSubmit={handleAddLead} className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
@@ -743,113 +892,176 @@ export default function Sales({ defaultTab = "analytics" }) {
               </form>
             </DialogContent>
           </Dialog>
-          <Card className="border border-border/50">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle>Leads List</CardTitle>
-                <div className="flex items-center space-x-2">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input
-                      placeholder="Search leads..."
-                      className="w-64 pl-10"
-                    />
-                  </div>
-                  <Button variant="outline" size="icon">
-                    <Filter className="w-4 h-4" />
-                  </Button>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="overflow-x-auto">
-                <table className="min-w-full text-xs md:text-sm">
-                  <thead>
-                    <tr className="bg-muted/50">
-                      <th className="p-2 font-semibold text-left">Company</th>
-                      <th className="p-2 font-semibold text-left">Contact</th>
-                      <th className="p-2 font-semibold text-left">Email</th>
-                      <th className="p-2 font-semibold text-left">Phone</th>
-                      <th className="p-2 font-semibold text-left">Value</th>
-                      <th className="p-2 font-semibold text-left">Priority</th>
-                      <th className="p-2 font-semibold text-left">Status</th>
-                      <th className="p-2 font-semibold text-left">Owner</th>
-                      <th className="p-2 font-semibold text-left">Tags</th>
-                      <th className="p-2 font-semibold text-left">Last Contact</th>
-                      <th className="p-2 font-semibold text-left">Actions</th>
+          {/* Leads Table */}
+          <div className="overflow-x-auto rounded border border-border/50 bg-white">
+            <table className="min-w-full divide-y divide-border">
+              <thead>
+                <tr>
+                  <th className="p-2 text-left"><input type="checkbox" checked={selectedLeads.length === filteredLeads.slice((leadsPage-1)*leadsView, leadsPage*leadsView).length && filteredLeads.length > 0} onChange={e => {
+                    if (e.target.checked) {
+                      setSelectedLeads(filteredLeads.slice((leadsPage-1)*leadsView, leadsPage*leadsView).map(l => l.id));
+                    } else {
+                      setSelectedLeads([]);
+                    }
+                  }} /></th>
+                  <th className="p-2 text-left">#</th>
+                  <th className="p-2 text-left">Name</th>
+                  <th className="p-2 text-left">Email</th>
+                  <th className="p-2 text-left">Phone</th>
+                  <th className="p-2 text-left">Company</th>
+                  <th className="p-2 text-left">Title</th>
+                  <th className="p-2 text-left">Source</th>
+                  <th className="p-2 text-left">Score</th>
+                  <th className="p-2 text-left">Status</th>
+                  <th className="p-2 text-left">Created</th>
+                  <th className="p-2 text-left">Updated</th>
+                  <th className="p-2 text-left">Notes</th>
+                  <th className="p-2 text-left">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredLeads.slice((leadsPage-1)*leadsView, leadsPage*leadsView).map((lead, idx) => {
+                  // Mock/placeholder data for missing fields
+                  const company = lead.name || "-";
+                  const title = lead.title || [
+                    "CTO", "CEO", "Director of Marketing", "Product Manager", "VP of Technology", "Digital Marketing", "IT Director", "Senior Consultant", "Founder", "VP of Marketing"
+                  ][idx % 10];
+                  const source = lead.source || [
+                    "referral", "social", "email", "event", "cold-call", "website", "referral", "social", "website", "website"
+                  ][idx % 10];
+                  const score = lead.score || [92, 78, 65, 88, 45, 72, 81, 58, 90, 85][idx % 10];
+                  const status = lead.status || [
+                    "qualified", "qualified", "new", "hot", "cold", "qualified", "qualified", "new", "hot", "hot"
+                  ][idx % 10];
+                  const created = lead.created || "06/26/25";
+                  const updated = lead.updated || "06/26/25";
+                  const notes = lead.notes || [
+                    "Referred by existing customer", "Connected via LinkedIn", "Downloaded whitepaper", "Met at conference, urgent follow-up", "Initial contact made, awaiting reply", "Completed demo recently", "Needs integration with ERP", "Early stage inquiry, exploring options", "Ready to purchase, just needs approval", "Interested in enterprise plan"
+                  ][idx % 10];
+                  // Score badge color
+                  let scoreColor: 'default' | 'destructive' | 'outline' | 'secondary' = 'secondary';
+                  if (score >= 85) scoreColor = 'default';
+                  else if (score >= 70) scoreColor = 'secondary';
+                  else scoreColor = 'destructive';
+                  // Status badge color
+                  let statusVariant: 'default' | 'destructive' | 'outline' | 'secondary' = 'outline';
+                  if (status === 'qualified') statusVariant = 'default';
+                  else if (status === 'hot') statusVariant = 'secondary';
+                  else if (status === 'cold') statusVariant = 'destructive';
+                  else if (status === 'new') statusVariant = 'outline';
+                  return (
+                    <tr key={lead.id || idx} className="border-b hover:bg-muted/30">
+                      <td className="p-2"><input type="checkbox" checked={selectedLeads.includes(lead.id)} onChange={e => {
+                        if (e.target.checked) setSelectedLeads([...selectedLeads, lead.id]);
+                        else setSelectedLeads(selectedLeads.filter(id => id !== lead.id));
+                      }} /></td>
+                      <td className="p-2">{(leadsPage-1)*leadsView + idx + 1}</td>
+                      <td className="p-2 font-medium">
+                        <a href="#" className="text-blue-600 hover:underline">{lead.contact || lead.name}</a>
+                      </td>
+                      <td className="p-2">{lead.email}</td>
+                      <td className="p-2">{lead.phone}</td>
+                      <td className="p-2 font-bold">{company}</td>
+                      <td className="p-2">{title}</td>
+                      <td className="p-2">{source}</td>
+                      <td className="p-2">
+                        <Badge variant={scoreColor}>{score}</Badge>
+                      </td>
+                      <td className="p-2">
+                        <Badge variant={statusVariant}>{status}</Badge>
+                      </td>
+                      <td className="p-2">{created}</td>
+                      <td className="p-2">{updated}</td>
+                      <td className="p-2 max-w-xs truncate" title={notes}>{notes}</td>
+                      <td className="p-2">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon">
+                              <MoreHorizontal className="w-4 h-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => { resetAllModals(); setViewLead({ ...lead }); }}>
+                              <Eye className="w-4 h-4 mr-2" /> View Details
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => {
+                              resetAllModals();
+                              setEditLead({ ...lead });
+                              setShowLeadForm(true);
+                              setNewLead({ ...lead, tags: Array.isArray(lead.tags) ? lead.tags.join(', ') : lead.tags });
+                            }}>
+                              <Edit className="w-4 h-4 mr-2" /> Edit Lead
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => { resetAllModals(); setLeadToConvert(lead); setShowConvertModal(true); }}>
+                              <ArrowUpRight className="w-4 h-4 mr-2" /> Convert to Opportunity
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem className="text-red-600 focus:text-red-600" onClick={() => handleDeleteLead(lead.id)}>
+                              <Trash className="w-4 h-4 mr-2" /> Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </td>
                     </tr>
-                  </thead>
-                  <tbody>
-                    {leads.map((lead) => (
-                      <tr key={lead.id} className="border-b hover:bg-muted/30">
-                        <td className="p-2 font-medium">{lead.name}</td>
-                        <td className="p-2">{lead.contact}</td>
-                        <td className="p-2">{lead.email}</td>
-                        <td className="p-2">{lead.phone}</td>
-                        <td className="p-2">{lead.value}</td>
-                        <td className="p-2">
-                          <Badge
-                            variant={
-                              lead.priority === "high"
-                                ? "destructive"
-                                : lead.priority === "medium"
-                                ? "default"
-                                : "secondary"
-                            }
-                          >
-                            {lead.priority}
-                          </Badge>
-                        </td>
-                        <td className="p-2">
-                          <Badge variant="outline">{lead.status}</Badge>
-                        </td>
-                        <td className="p-2">{lead.owner}</td>
-                        <td className="p-2">
-                          <div className="flex flex-wrap gap-1">
-                            {lead.tags && lead.tags.length > 0 &&
-                              lead.tags.map((tag) => (
-                                <Badge key={tag} variant="secondary" className="text-xs">
-                                  {tag}
-                                </Badge>
-                              ))}
-                          </div>
-                        </td>
-                        <td className="p-2">{lead.lastContact}</td>
-                        <td className="p-2">
-                          <div className="flex items-center space-x-1">
-                            <Button variant="ghost" size="icon">
-                              <Eye className="w-4 h-4" />
-                            </Button>
-                            <Button variant="ghost" size="icon">
-                              <Edit className="w-4 h-4" />
-                            </Button>
-                            <Button variant="outline" size="icon">
-                              <Phone className="w-4 h-4" />
-                            </Button>
-                            <Button variant="outline" size="icon">
-                              <Mail className="w-4 h-4" />
-                            </Button>
-                            <Button variant="outline" size="icon">
-                              <Calendar className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </CardContent>
-          </Card>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </TabsContent>
 
         {/* Contacts */}
         <TabsContent value="contacts" className="space-y-6">
+          {/* Page Title and Filter Bar */}
+          <div className="flex items-center justify-between px-2 py-2">
+            <div className="flex items-center space-x-4">
+              <h1 className="text-2xl font-bold">Contacts</h1>
+            </div>
+            <div className="flex items-center space-x-2">
+              <label className="text-sm text-muted-foreground">View</label>
+              <select className="border rounded px-2 py-1 text-sm" value={contactsView} onChange={e => { setContactsView(Number(e.target.value)); setContactsPage(1); }}>
+                {[5, 10, 20, 50].map(n => <option key={n} value={n}>{n}</option>)}
+              </select>
+              <Button variant="outline" size="sm" disabled={contactsPage === 1} onClick={() => setContactsPage(p => Math.max(1, p - 1))}>&lt;</Button>
+              <span className="text-xs">Page {contactsPage} of {Math.max(1, Math.ceil(filteredContacts.length / contactsView))}</span>
+              <Button variant="outline" size="sm" disabled={contactsPage === Math.ceil(filteredContacts.length / contactsView) || filteredContacts.length === 0} onClick={() => setContactsPage(p => Math.min(Math.ceil(filteredContacts.length / contactsView), p + 1))}>&gt;</Button>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search contacts..."
+                  className="w-56 pl-10"
+                  value={contactSearch || ''}
+                  onChange={e => setContactSearch(e.target.value)}
+                />
+              </div>
+              <Button variant="outline">Import</Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline">Actions</Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => {
+                    setContacts(prev => prev.filter(c => !selectedContacts.includes(c.id)));
+                    setSelectedContacts([]);
+                    toast({ title: 'Contacts deleted', description: 'Selected contacts deleted successfully!' });
+                  }}>Bulk Delete</DropdownMenuItem>
+                  <DropdownMenuItem>Export Selected</DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <Button onClick={() => setShowContactForm(true)}>
+                <Plus className="w-4 h-4 mr-2" />
+                Add Contact
+              </Button>
+            </div>
+          </div>
           {/* Add Contact Modal */}
-          <Dialog open={showContactForm} onOpenChange={setShowContactForm}>
+          <Dialog open={showContactForm} onOpenChange={open => { if (!open) resetAllModals(); else setShowContactForm(true); }}>
             <DialogContent>
               <DialogHeader>
                 <DialogTitle>Add Contact</DialogTitle>
+                <DialogDescription>
+                  Enter details for a new contact.
+                </DialogDescription>
               </DialogHeader>
               <form onSubmit={handleAddContact} className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
@@ -891,54 +1103,74 @@ export default function Sales({ defaultTab = "analytics" }) {
               </form>
             </DialogContent>
           </Dialog>
-          <Card className="border border-border/50">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle>Contact Directory</CardTitle>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="overflow-x-auto">
-                <Table className="text-xs md:text-sm">
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>ID</TableHead>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Title</TableHead>
-                      <TableHead>Company</TableHead>
-                      <TableHead>Email</TableHead>
-                      <TableHead>Phone</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Last Contact</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {contacts.map((contact) => (
-                      <TableRow key={contact.id}>
-                        <TableCell>{contact.id}</TableCell>
-                        <TableCell>{contact.name}</TableCell>
-                        <TableCell>{contact.title}</TableCell>
-                        <TableCell>{contact.company}</TableCell>
-                        <TableCell>{contact.email}</TableCell>
-                        <TableCell>{contact.phone}</TableCell>
-                        <TableCell>
-                          <span className={`px-2 py-1 rounded text-xs ${contact.status === "active" ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"}`}>{contact.status}</span>
-                        </TableCell>
-                        <TableCell>{contact.lastContact}</TableCell>
-                        <TableCell>
-                          <div className="flex space-x-1">
-                            <Button variant="ghost" size="icon" className="h-6 w-6 p-0"><Eye className="w-4 h-4" /></Button>
-                            <Button variant="ghost" size="icon" className="h-6 w-6 p-0"><Edit className="w-4 h-4" /></Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            </CardContent>
-          </Card>
+          {/* Contacts Table */}
+          <div className="overflow-x-auto rounded border border-border/50 bg-white">
+            <table className="min-w-full divide-y divide-border">
+              <thead>
+                <tr>
+                  <th className="p-2 text-left"><input type="checkbox" checked={selectedContacts.length === filteredContacts.slice((contactsPage-1)*contactsView, contactsPage*contactsView).length && filteredContacts.length > 0} onChange={e => {
+                    if (e.target.checked) {
+                      setSelectedContacts(filteredContacts.slice((contactsPage-1)*contactsView, contactsPage*contactsView).map(c => c.id));
+                    } else {
+                      setSelectedContacts([]);
+                    }
+                  }} /></th>
+                  <th className="p-2 text-left">#</th>
+                  <th className="p-2 text-left">Name</th>
+                  <th className="p-2 text-left">Title</th>
+                  <th className="p-2 text-left">Company</th>
+                  <th className="p-2 text-left">Email</th>
+                  <th className="p-2 text-left">Phone</th>
+                  <th className="p-2 text-left">Status</th>
+                  <th className="p-2 text-left">Last Contact</th>
+                  <th className="p-2 text-left">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(contacts || []).filter(c => !contactSearch || c.name.toLowerCase().includes(contactSearch.toLowerCase()) || c.email.toLowerCase().includes(contactSearch.toLowerCase()) || c.company.toLowerCase().includes(contactSearch.toLowerCase())).slice((contactsPage-1)*contactsView, contactsPage*contactsView).map((contact, idx) => (
+                  <tr key={contact.id || idx} className="border-b hover:bg-muted/30">
+                    <td className="p-2"><input type="checkbox" checked={selectedContacts.includes(contact.id)} onChange={e => {
+                      if (e.target.checked) setSelectedContacts([...selectedContacts, contact.id]);
+                      else setSelectedContacts(selectedContacts.filter(id => id !== contact.id));
+                    }} /></td>
+                    <td className="p-2">{idx + 1}</td>
+                    <td className="p-2 font-medium">
+                      <a href="#" className="text-blue-600 hover:underline">{contact.name}</a>
+                    </td>
+                    <td className="p-2">{contact.title}</td>
+                    <td className="p-2">{contact.company}</td>
+                    <td className="p-2">{contact.email}</td>
+                    <td className="p-2">{contact.phone}</td>
+                    <td className="p-2">
+                      <span className={`px-2 py-1 rounded text-xs ${contact.status === "active" ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"}`}>{contact.status}</span>
+                    </td>
+                    <td className="p-2">{contact.lastContact}</td>
+                    <td className="p-2">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon">
+                            <MoreHorizontal className="w-4 h-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => { resetAllModals(); setViewContact({ ...contact }); }}>
+                            <Eye className="w-4 h-4 mr-2" /> View Details
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => { resetAllModals(); setEditContact({ ...contact }); setShowContactForm(true); setNewContact({ ...contact }); }}>
+                            <Edit className="w-4 h-4 mr-2" /> Edit Contact
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem className="text-red-600 focus:text-red-600" onClick={() => handleDeleteContact(contact.id)}>
+                            <Trash className="w-4 h-4 mr-2" /> Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </TabsContent>
 
         {/* Opportunities Pipeline */}
@@ -947,7 +1179,10 @@ export default function Sales({ defaultTab = "analytics" }) {
           <Dialog open={showOpportunityForm} onOpenChange={setShowOpportunityForm}>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>{editingOpportunity ? "Edit Opportunity" : "Add Opportunity"}</DialogTitle>
+                <DialogTitle>Add Opportunity</DialogTitle>
+                <DialogDescription>
+                  Enter details for a new opportunity.
+                </DialogDescription>
               </DialogHeader>
               <form onSubmit={handleAddOpportunity} className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
@@ -986,7 +1221,7 @@ export default function Sales({ defaultTab = "analytics" }) {
                   </div>
                 </div>
                 <DialogFooter>
-                  <Button type="submit">{editingOpportunity ? "Update" : "Add"} Opportunity</Button>
+                  <Button type="submit">Add Opportunity</Button>
                 </DialogFooter>
               </form>
             </DialogContent>
@@ -1067,11 +1302,56 @@ export default function Sales({ defaultTab = "analytics" }) {
 
         {/* Quotes */}
         <TabsContent value="quotes" className="space-y-6">
+          {/* Page Title and Filter Bar */}
+          <div className="flex items-center justify-between px-2 py-2">
+            <div className="flex items-center space-x-4">
+              <h1 className="text-2xl font-bold">Quotes</h1>
+            </div>
+            <div className="flex items-center space-x-2">
+              <label className="text-sm text-muted-foreground">View</label>
+              <select className="border rounded px-2 py-1 text-sm" value={quotesView} onChange={e => { setQuotesView(Number(e.target.value)); setQuotesPage(1); }}>
+                {[5, 10, 20, 50].map(n => <option key={n} value={n}>{n}</option>)}
+              </select>
+              <Button variant="outline" size="sm" disabled={quotesPage === 1} onClick={() => setQuotesPage(p => Math.max(1, p - 1))}>&lt;</Button>
+              <span className="text-xs">Page {quotesPage} of {Math.max(1, Math.ceil(filteredQuotes.length / quotesView))}</span>
+              <Button variant="outline" size="sm" disabled={quotesPage === Math.ceil(filteredQuotes.length / quotesView) || filteredQuotes.length === 0} onClick={() => setQuotesPage(p => Math.min(Math.ceil(filteredQuotes.length / quotesView), p + 1))}>&gt;</Button>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search quotes..."
+                  className="w-56 pl-10"
+                  value={quoteSearch || ''}
+                  onChange={e => setQuoteSearch(e.target.value)}
+                />
+              </div>
+              <Button variant="outline">Import</Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline">Actions</Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => {
+                    setQuotes(prev => prev.filter(q => !selectedQuotes.includes(q.id)));
+                    setSelectedQuotes([]);
+                    toast({ title: 'Quotes deleted', description: 'Selected quotes deleted successfully!' });
+                  }}>Bulk Delete</DropdownMenuItem>
+                  <DropdownMenuItem>Export Selected</DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <Button onClick={() => setShowQuoteForm(true)}>
+                <Plus className="w-4 h-4 mr-2" />
+                Create Quote
+              </Button>
+            </div>
+          </div>
           {/* Add Quote Modal */}
-          <Dialog open={showQuoteForm} onOpenChange={setShowQuoteForm}>
+          <Dialog open={showQuoteForm} onOpenChange={open => { if (!open) resetAllModals(); else setShowQuoteForm(true); }}>
             <DialogContent>
               <DialogHeader>
                 <DialogTitle>Create Quote</DialogTitle>
+                <DialogDescription>
+                  Enter details for a new quote.
+                </DialogDescription>
               </DialogHeader>
               <form onSubmit={handleAddQuote} className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
@@ -1106,137 +1386,124 @@ export default function Sales({ defaultTab = "analytics" }) {
               </form>
             </DialogContent>
           </Dialog>
-          <Card className="border border-border/50">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle>Quotes List</CardTitle>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="overflow-x-auto">
-                <Table className="text-xs md:text-sm">
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>ID</TableHead>
-                      <TableHead>Customer</TableHead>
-                      <TableHead>Amount</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Created</TableHead>
-                      <TableHead>Owner</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {quotes.map((quote) => (
-                      <TableRow key={quote.id}>
-                        <TableCell>{quote.id}</TableCell>
-                        <TableCell>{quote.customer}</TableCell>
-                        <TableCell>{quote.amount}</TableCell>
-                        <TableCell>
-                          <Badge variant={quote.status === "approved" ? "default" : quote.status === "rejected" ? "destructive" : "secondary"}>{quote.status}</Badge>
-                        </TableCell>
-                        <TableCell>{quote.created}</TableCell>
-                        <TableCell>{quote.owner}</TableCell>
-                        <TableCell>
-                          <div className="flex space-x-1">
-                            <Button variant="ghost" size="icon" className="h-6 w-6 p-0"><Eye className="w-4 h-4" /></Button>
-                            <Button variant="ghost" size="icon" className="h-6 w-6 p-0"><Edit className="w-4 h-4" /></Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Products Catalog */}
-        <TabsContent value="products" className="space-y-6">
-          {/* Add/Edit Product Modal */}
-          <Dialog open={showProductForm} onOpenChange={setShowProductForm}>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>{editingProduct ? "Edit Product" : "Add Product"}</DialogTitle>
-              </DialogHeader>
-              <form onSubmit={handleAddProduct} className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="product-name">Name</Label>
-                    <Input id="product-name" name="name" value={newProduct.name} onChange={handleProductInput} required />
-                  </div>
-                  <div>
-                    <Label htmlFor="product-image">Image URL</Label>
-                    <Input id="product-image" name="image" value={newProduct.image} onChange={handleProductInput} required />
-                  </div>
-                  <div>
-                    <Label htmlFor="product-price">Price</Label>
-                    <Input id="product-price" name="price" value={newProduct.price} onChange={handleProductInput} required />
-                  </div>
-                  <div>
-                    <Label htmlFor="product-stock">Stock</Label>
-                    <Input id="product-stock" name="stock" value={newProduct.stock} onChange={handleProductInput} required />
-                  </div>
-                  <div className="col-span-2">
-                    <Label htmlFor="product-category">Category</Label>
-                    <Input id="product-category" name="category" value={newProduct.category} onChange={handleProductInput} required />
-                  </div>
-                </div>
-                <DialogFooter>
-                  <Button type="submit">{editingProduct ? "Update" : "Add"} Product</Button>
-                </DialogFooter>
-              </form>
-            </DialogContent>
-          </Dialog>
-          <Card className="border border-border/50">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle>Products Catalog</CardTitle>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
-                {products.map((product) => (
-                  <Card key={product.id} className="overflow-hidden p-2">
-                    <div className="h-20 bg-muted/50 flex items-center justify-center">
-                      <img src={product.image} alt={product.name} className="h-12 object-contain" />
-                    </div>
-                    <CardContent className="p-2">
-                      <h3 className="font-semibold mb-1 text-xs truncate">{product.name}</h3>
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-base font-bold text-primary">
-                          {product.price}
-                        </span>
-                        <Badge variant="secondary" className="text-[10px] px-2 py-0.5">{product.category}</Badge>
-                      </div>
-                      <p className="text-xs text-muted-foreground mb-1 truncate">
-                        Stock: {product.stock}
-                      </p>
-                      <div className="flex space-x-1">
-                        <Button variant="outline" size="sm" className="flex-1 px-1 py-1 text-xs h-7" onClick={() => handleEditProduct(product)}>
-                          <Edit className="w-3 h-3 mr-1" />
-                          Edit
-                        </Button>
-                        <Button variant="destructive" size="sm" className="flex-1 px-1 py-1 text-xs h-7" onClick={() => handleDeleteProduct(product.id)}>
-                          Delete
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
+          {/* Quotes Table */}
+          <div className="overflow-x-auto rounded border border-border/50 bg-white">
+            <table className="min-w-full divide-y divide-border">
+              <thead>
+                <tr>
+                  <th className="p-2 text-left"><input type="checkbox" checked={selectedQuotes.length === filteredQuotes.slice((quotesPage-1)*quotesView, quotesPage*quotesView).length && filteredQuotes.length > 0} onChange={e => {
+                    if (e.target.checked) {
+                      setSelectedQuotes(filteredQuotes.slice((quotesPage-1)*quotesView, quotesPage*quotesView).map(q => q.id));
+                    } else {
+                      setSelectedQuotes([]);
+                    }
+                  }} /></th>
+                  <th className="p-2 text-left">#</th>
+                  <th className="p-2 text-left">Customer</th>
+                  <th className="p-2 text-left">Amount</th>
+                  <th className="p-2 text-left">Status</th>
+                  <th className="p-2 text-left">Created</th>
+                  <th className="p-2 text-left">Owner</th>
+                  <th className="p-2 text-left">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(quotes || []).filter(q => !quoteSearch || q.customer.toLowerCase().includes(quoteSearch.toLowerCase())).slice((quotesPage-1)*quotesView, quotesPage*quotesView).map((quote, idx) => (
+                  <tr key={quote.id || idx} className="border-b hover:bg-muted/30">
+                    <td className="p-2"><input type="checkbox" checked={selectedQuotes.includes(quote.id)} onChange={e => {
+                      if (e.target.checked) setSelectedQuotes([...selectedQuotes, quote.id]);
+                      else setSelectedQuotes(selectedQuotes.filter(id => id !== quote.id));
+                    }} /></td>
+                    <td className="p-2">{idx + 1}</td>
+                    <td className="p-2 font-medium">
+                      <a href="#" className="text-blue-600 hover:underline">{quote.customer}</a>
+                    </td>
+                    <td className="p-2">{quote.amount}</td>
+                    <td className="p-2">
+                      <Badge variant={quote.status === "approved" ? "default" : quote.status === "rejected" ? "destructive" : "secondary"}>{quote.status}</Badge>
+                    </td>
+                    <td className="p-2">{quote.created}</td>
+                    <td className="p-2">{quote.owner}</td>
+                    <td className="p-2">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon">
+                            <MoreHorizontal className="w-4 h-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => { resetAllModals(); setViewQuote({ ...quote }); }}>
+                            <Eye className="w-4 h-4 mr-2" /> View Details
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => { resetAllModals(); setEditQuote({ ...quote }); setShowQuoteForm(true); setNewQuote({ ...quote }); }}>
+                            <Edit className="w-4 h-4 mr-2" /> Edit Quote
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem className="text-red-600 focus:text-red-600" onClick={() => handleDeleteQuote(quote.id)}>
+                            <Trash className="w-4 h-4 mr-2" /> Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </td>
+                  </tr>
                 ))}
-              </div>
-            </CardContent>
-          </Card>
+              </tbody>
+            </table>
+          </div>
         </TabsContent>
 
         {/* Orders */}
         <TabsContent value="orders" className="space-y-6">
+          {/* Page Title and Filter Bar */}
+          <div className="flex items-center justify-between px-2 py-2">
+            <div className="flex items-center space-x-4">
+              <h1 className="text-2xl font-bold">Orders</h1>
+            </div>
+            <div className="flex items-center space-x-2">
+              <label className="text-sm text-muted-foreground">View</label>
+              <select className="border rounded px-2 py-1 text-sm" value={ordersView} onChange={e => { setOrdersView(Number(e.target.value)); setOrdersPage(1); }}>
+                {[5, 10, 20, 50].map(n => <option key={n} value={n}>{n}</option>)}
+              </select>
+              <Button variant="outline" size="sm" disabled={ordersPage === 1} onClick={() => setOrdersPage(p => Math.max(1, p - 1))}>&lt;</Button>
+              <span className="text-xs">Page {ordersPage} of {Math.max(1, Math.ceil(filteredOrders.length / ordersView))}</span>
+              <Button variant="outline" size="sm" disabled={ordersPage === Math.ceil(filteredOrders.length / ordersView) || filteredOrders.length === 0} onClick={() => setOrdersPage(p => Math.min(Math.ceil(filteredOrders.length / ordersView), p + 1))}>&gt;</Button>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search orders..."
+                  className="w-56 pl-10"
+                  value={orderSearch || ''}
+                  onChange={e => setOrderSearch(e.target.value)}
+                />
+              </div>
+              <Button variant="outline">Import</Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline">Actions</Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => {
+                    setOrders(prev => prev.filter(o => !selectedOrders.includes(o.id)));
+                    setSelectedOrders([]);
+                    toast({ title: 'Orders deleted', description: 'Selected orders deleted successfully!' });
+                  }}>Bulk Delete</DropdownMenuItem>
+                  <DropdownMenuItem>Export Selected</DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <Button onClick={() => setShowOrderForm(true)}>
+                <Plus className="w-4 h-4 mr-2" />
+                New Order
+              </Button>
+            </div>
+          </div>
           {/* Add Order Modal */}
-          <Dialog open={showOrderForm} onOpenChange={setShowOrderForm}>
+          <Dialog open={showOrderForm} onOpenChange={open => { if (!open) resetAllModals(); else setShowOrderForm(true); }}>
             <DialogContent>
               <DialogHeader>
                 <DialogTitle>New Order</DialogTitle>
+                <DialogDescription>
+                  Enter details for a new order.
+                </DialogDescription>
               </DialogHeader>
               <form onSubmit={handleAddOrder} className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
@@ -1279,56 +1546,371 @@ export default function Sales({ defaultTab = "analytics" }) {
               </form>
             </DialogContent>
           </Dialog>
-          <Card className="border border-border/50">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle>Orders List</CardTitle>
+          {/* Orders Table */}
+          <div className="overflow-x-auto rounded border border-border/50 bg-white">
+            <table className="min-w-full divide-y divide-border">
+              <thead>
+                <tr>
+                  <th className="p-2 text-left"><input type="checkbox" checked={selectedOrders.length === filteredOrders.slice((ordersPage-1)*ordersView, ordersPage*ordersView).length && filteredOrders.length > 0} onChange={e => {
+                    if (e.target.checked) {
+                      setSelectedOrders(filteredOrders.slice((ordersPage-1)*ordersView, ordersPage*ordersView).map(o => o.id));
+                    } else {
+                      setSelectedOrders([]);
+                    }
+                  }} /></th>
+                  <th className="p-2 text-left">#</th>
+                  <th className="p-2 text-left">Customer</th>
+                  <th className="p-2 text-left">Total</th>
+                  <th className="p-2 text-left">Status</th>
+                  <th className="p-2 text-left">Payment</th>
+                  <th className="p-2 text-left">Shipment</th>
+                  <th className="p-2 text-left">Created</th>
+                  <th className="p-2 text-left">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(orders || []).filter(o => !orderSearch || o.customer.toLowerCase().includes(orderSearch.toLowerCase())).slice((ordersPage-1)*ordersView, ordersPage*ordersView).map((order, idx) => (
+                  <tr key={order.id || idx} className="border-b hover:bg-muted/30">
+                    <td className="p-2"><input type="checkbox" checked={selectedOrders.includes(order.id)} onChange={e => {
+                      if (e.target.checked) setSelectedOrders([...selectedOrders, order.id]);
+                      else setSelectedOrders(selectedOrders.filter(id => id !== order.id));
+                    }} /></td>
+                    <td className="p-2">{idx + 1}</td>
+                    <td className="p-2 font-medium">
+                      <a href="#" className="text-blue-600 hover:underline">{order.customer}</a>
+                    </td>
+                    <td className="p-2">{order.total}</td>
+                    <td className="p-2">
+                      <Badge variant={order.status === "completed" ? "default" : order.status === "cancelled" ? "destructive" : "secondary"}>{order.status}</Badge>
+                    </td>
+                    <td className="p-2">
+                      <Badge variant={order.payment === "paid" ? "default" : order.payment === "refunded" ? "destructive" : "secondary"}>{order.payment}</Badge>
+                    </td>
+                    <td className="p-2">{order.shipment}</td>
+                    <td className="p-2">{order.created}</td>
+                    <td className="p-2">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon">
+                            <MoreHorizontal className="w-4 h-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => { resetAllModals(); setViewOrder({ ...order }); }}>
+                            <Eye className="w-4 h-4 mr-2" /> View Details
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => { resetAllModals(); setEditOrder({ ...order }); setShowOrderForm(true); setNewOrder({ ...order }); }}>
+                            <Edit className="w-4 h-4 mr-2" /> Edit Order
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem className="text-red-600 focus:text-red-600" onClick={() => handleDeleteOrder(order.id)}>
+                            <Trash className="w-4 h-4 mr-2" /> Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </TabsContent>
+
+        {/* Products Catalog */}
+        <TabsContent value="products" className="space-y-6">
+          {/* Page Title and Filter Bar */}
+          <div className="flex items-center justify-between px-2 py-2">
+            <div className="flex items-center space-x-4">
+              <h1 className="text-2xl font-bold">Products</h1>
+            </div>
+            <div className="flex items-center space-x-2">
+              <label className="text-sm text-muted-foreground">View</label>
+              <select className="border rounded px-2 py-1 text-sm" value={productsView} onChange={e => { setProductsView(Number(e.target.value)); setProductsPage(1); }}>
+                {[5, 10, 20, 50].map(n => <option key={n} value={n}>{n}</option>)}
+              </select>
+              <Button variant="outline" size="sm" disabled={productsPage === 1} onClick={() => setProductsPage(p => Math.max(1, p - 1))}>&lt;</Button>
+              <span className="text-xs">Page {productsPage} of {Math.max(1, Math.ceil(filteredProducts.length / productsView))}</span>
+              <Button variant="outline" size="sm" disabled={productsPage === Math.ceil(filteredProducts.length / productsView) || filteredProducts.length === 0} onClick={() => setProductsPage(p => Math.min(Math.ceil(filteredProducts.length / productsView), p + 1))}>&gt;</Button>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search products..."
+                  className="w-56 pl-10"
+                  value={productSearch || ''}
+                  onChange={e => setProductSearch(e.target.value)}
+                />
               </div>
-            </CardHeader>
-            <CardContent>
-              <div className="overflow-x-auto">
-                <Table className="text-xs md:text-sm">
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>ID</TableHead>
-                      <TableHead>Customer</TableHead>
-                      <TableHead>Total</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Payment</TableHead>
-                      <TableHead>Shipment</TableHead>
-                      <TableHead>Created</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {orders.map((order) => (
-                      <TableRow key={order.id}>
-                        <TableCell>{order.id}</TableCell>
-                        <TableCell>{order.customer}</TableCell>
-                        <TableCell>{order.total}</TableCell>
-                        <TableCell>
-                          <Badge variant={order.status === "completed" ? "default" : order.status === "cancelled" ? "destructive" : "secondary"}>{order.status}</Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={order.payment === "paid" ? "default" : order.payment === "refunded" ? "destructive" : "secondary"}>{order.payment}</Badge>
-                        </TableCell>
-                        <TableCell>{order.shipment}</TableCell>
-                        <TableCell>{order.created}</TableCell>
-                        <TableCell>
-                          <div className="flex space-x-1">
-                            <Button variant="ghost" size="icon" className="h-6 w-6 p-0"><Eye className="w-4 h-4" /></Button>
-                            <Button variant="ghost" size="icon" className="h-6 w-6 p-0"><Edit className="w-4 h-4" /></Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            </CardContent>
-          </Card>
+              <Button variant="outline">Import</Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline">Actions</Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => {
+                    setProducts(prev => prev.filter(p => !selectedProducts.includes(p.id)));
+                    setSelectedProducts([]);
+                    toast({ title: 'Products deleted', description: 'Selected products deleted successfully!' });
+                  }}>Bulk Delete</DropdownMenuItem>
+                  <DropdownMenuItem>Export Selected</DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <Button onClick={() => { setShowProductForm(true); setEditingProduct(null); }}>
+                <Plus className="w-4 h-4 mr-2" />
+                Add Product
+              </Button>
+            </div>
+          </div>
+          {/* Add/Edit Product Modal */}
+          <Dialog open={showProductForm} onOpenChange={open => { if (!open) resetAllModals(); else setShowProductForm(true); }}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Add Product</DialogTitle>
+                <DialogDescription>
+                  Enter details for a new product.
+                </DialogDescription>
+              </DialogHeader>
+              <form onSubmit={handleAddProduct} className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="product-name">Name</Label>
+                    <Input id="product-name" name="name" value={newProduct.name} onChange={handleProductInput} required />
+                  </div>
+                  <div>
+                    <Label htmlFor="product-image">Image URL</Label>
+                    <Input id="product-image" name="image" value={newProduct.image} onChange={handleProductInput} required />
+                  </div>
+                  <div>
+                    <Label htmlFor="product-price">Price</Label>
+                    <Input id="product-price" name="price" value={newProduct.price} onChange={handleProductInput} required />
+                  </div>
+                  <div>
+                    <Label htmlFor="product-stock">Stock</Label>
+                    <Input id="product-stock" name="stock" value={newProduct.stock} onChange={handleProductInput} required />
+                  </div>
+                  <div className="col-span-2">
+                    <Label htmlFor="product-category">Category</Label>
+                    <Input id="product-category" name="category" value={newProduct.category} onChange={handleProductInput} required />
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button type="submit">Add Product</Button>
+                </DialogFooter>
+              </form>
+            </DialogContent>
+          </Dialog>
+          {/* Products Table */}
+          <div className="overflow-x-auto rounded border border-border/50 bg-white">
+            <table className="min-w-full divide-y divide-border">
+              <thead>
+                <tr>
+                  <th className="p-2 text-left"><input type="checkbox" checked={selectedProducts.length === filteredProducts.slice((productsPage-1)*productsView, productsPage*productsView).length && filteredProducts.length > 0} onChange={e => {
+                    if (e.target.checked) {
+                      setSelectedProducts(filteredProducts.slice((productsPage-1)*productsView, productsPage*productsView).map(p => p.id));
+                    } else {
+                      setSelectedProducts([]);
+                    }
+                  }} /></th>
+                  <th className="p-2 text-left">#</th>
+                  <th className="p-2 text-left">Image</th>
+                  <th className="p-2 text-left">Name</th>
+                  <th className="p-2 text-left">Price</th>
+                  <th className="p-2 text-left">Stock</th>
+                  <th className="p-2 text-left">Category</th>
+                  <th className="p-2 text-left">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(products || []).filter(p => !productSearch || p.name.toLowerCase().includes(productSearch.toLowerCase())).slice((productsPage-1)*productsView, productsPage*productsView).map((product, idx) => (
+                  <tr key={product.id || idx} className="border-b hover:bg-muted/30">
+                    <td className="p-2"><input type="checkbox" checked={selectedProducts.includes(product.id)} onChange={e => {
+                      if (e.target.checked) setSelectedProducts([...selectedProducts, product.id]);
+                      else setSelectedProducts(selectedProducts.filter(id => id !== product.id));
+                    }} /></td>
+                    <td className="p-2">{idx + 1}</td>
+                    <td className="p-2"><img src={product.image} alt={product.name} className="h-8 w-8 object-contain" /></td>
+                    <td className="p-2 font-medium">
+                      <a href="#" className="text-blue-600 hover:underline">{product.name}</a>
+                    </td>
+                    <td className="p-2">{product.price}</td>
+                    <td className="p-2">{product.stock}</td>
+                    <td className="p-2">{product.category}</td>
+                    <td className="p-2">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon">
+                            <MoreHorizontal className="w-4 h-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => { resetAllModals(); setViewProduct({ ...product, stock: String(product.stock) }); }}>
+                            <Eye className="w-4 h-4 mr-2" /> View Details
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => { resetAllModals(); setEditingProduct({ ...product }); setShowProductForm(true); setNewProduct({ ...product, stock: String(product.stock) }); }}>
+                            <Edit className="w-4 h-4 mr-2" /> Edit Product
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem className="text-red-600 focus:text-red-600" onClick={() => handleDeleteProduct(product.id)}>
+                            <Trash className="w-4 h-4 mr-2" /> Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </TabsContent>
       </Tabs>
+
+      {/* View Lead Details Modal */}
+      <Dialog open={!!viewLead} onOpenChange={open => { if (!open) resetAllModals(); else setViewLead(viewLead); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Lead Details</DialogTitle>
+            <DialogDescription>
+              Detailed information about the selected lead.
+            </DialogDescription>
+          </DialogHeader>
+          {viewLead && (
+            <div className="space-y-2">
+              <div><b>Name:</b> {viewLead.name}</div>
+              <div><b>Contact:</b> {viewLead.contact}</div>
+              <div><b>Email:</b> {viewLead.email}</div>
+              <div><b>Phone:</b> {viewLead.phone}</div>
+              <div><b>Company:</b> {viewLead.company}</div>
+              <div><b>Title:</b> {viewLead.title}</div>
+              <div><b>Status:</b> {viewLead.status}</div>
+              <div><b>Priority:</b> {viewLead.priority}</div>
+              <div><b>Owner:</b> {viewLead.owner}</div>
+              <div><b>Tags:</b> {Array.isArray(viewLead.tags) ? viewLead.tags.join(', ') : viewLead.tags}</div>
+              <div><b>Notes:</b> {viewLead.notes}</div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Convert to Opportunity Modal */}
+      <Dialog open={showConvertModal} onOpenChange={open => { if (!open) resetAllModals(); else setShowConvertModal(true); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Convert Lead to Opportunity</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to convert this lead to an opportunity?
+            </DialogDescription>
+          </DialogHeader>
+          <div>Are you sure you want to convert <b>{leadToConvert?.name}</b> to an opportunity?</div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowConvertModal(false)}>Cancel</Button>
+            <Button onClick={() => {
+              if (leadToConvert) {
+                setOpportunities(prev => [
+                  {
+                    id: `O-${(prev.length + 1).toString().padStart(3, "0")}`,
+                    title: leadToConvert.name,
+                    company: leadToConvert.company,
+                    value: leadToConvert.value,
+                    stage: "prospect",
+                    probability: 0,
+                    closeDate: "",
+                    owner: leadToConvert.owner,
+                  },
+                  ...prev,
+                ]);
+                setShowConvertModal(false);
+                toast({ title: 'Converted', description: 'Lead converted to opportunity!' });
+              }
+            }}>Convert</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* View Contact Details Modal */}
+      <Dialog open={!!viewContact} onOpenChange={open => { if (!open) resetAllModals(); else setViewContact(viewContact); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Contact Details</DialogTitle>
+            <DialogDescription>
+              Detailed information about the selected contact.
+            </DialogDescription>
+          </DialogHeader>
+          {viewContact && (
+            <div className="space-y-2">
+              <div><b>Name:</b> {viewContact.name}</div>
+              <div><b>Title:</b> {viewContact.title}</div>
+              <div><b>Company:</b> {viewContact.company}</div>
+              <div><b>Email:</b> {viewContact.email}</div>
+              <div><b>Phone:</b> {viewContact.phone}</div>
+              <div><b>Status:</b> {viewContact.status}</div>
+              <div><b>Last Contact:</b> {viewContact.lastContact}</div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* View Quote Details Modal */}
+      <Dialog open={!!viewQuote} onOpenChange={open => { if (!open) resetAllModals(); else setViewQuote(viewQuote); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Quote Details</DialogTitle>
+            <DialogDescription>
+              Detailed information about the selected quote.
+            </DialogDescription>
+          </DialogHeader>
+          {viewQuote && (
+            <div className="space-y-2">
+              <div><b>Customer:</b> {viewQuote.customer}</div>
+              <div><b>Amount:</b> {viewQuote.amount}</div>
+              <div><b>Status:</b> {viewQuote.status}</div>
+              <div><b>Created:</b> {viewQuote.created}</div>
+              <div><b>Owner:</b> {viewQuote.owner}</div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* View Order Details Modal */}
+      <Dialog open={!!viewOrder} onOpenChange={open => { if (!open) resetAllModals(); else setViewOrder(viewOrder); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Order Details</DialogTitle>
+            <DialogDescription>
+              Detailed information about the selected order.
+            </DialogDescription>
+          </DialogHeader>
+          {viewOrder && (
+            <div className="space-y-2">
+              <div><b>Customer:</b> {viewOrder.customer}</div>
+              <div><b>Total:</b> {viewOrder.total}</div>
+              <div><b>Status:</b> {viewOrder.status}</div>
+              <div><b>Payment:</b> {viewOrder.payment}</div>
+              <div><b>Shipment:</b> {viewOrder.shipment}</div>
+              <div><b>Created:</b> {viewOrder.created}</div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* View Product Details Modal */}
+      <Dialog open={!!viewProduct} onOpenChange={open => { if (!open) resetAllModals(); else setViewProduct(viewProduct); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Product Details</DialogTitle>
+            <DialogDescription>
+              Detailed information about the selected product.
+            </DialogDescription>
+          </DialogHeader>
+          {viewProduct && (
+            <div className="space-y-2">
+              <div><b>Name:</b> {viewProduct.name}</div>
+              <div><b>Image:</b> {viewProduct.image}</div>
+              <div><b>Price:</b> {viewProduct.price}</div>
+              <div><b>Stock:</b> {viewProduct.stock}</div>
+              <div><b>Category:</b> {viewProduct.category}</div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

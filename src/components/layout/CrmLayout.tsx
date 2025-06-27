@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import LeftNavbar from "./LeftNavbar";
 import RightAppsPanel from "./RightAppsPanel";
 import AIAssistantPanel from "./AIAssistantPanel";
-import { Bot, Menu, X, Grid3X3, Target } from "lucide-react";
+import { Bot, Menu, X, Grid3X3, Target, LayoutDashboard } from "lucide-react";
 import {
   Mail,
   MessageSquare,
@@ -135,7 +135,7 @@ const initialApps = [
 
 // Define all possible apps in one place
 const allApps = [
-  { name: "Dashboard", href: "/dashboard", icon: TrendingUp, description: "Main dashboard", color: "bg-gray-600", count: 0, status: "active" },
+  { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard, description: "Main dashboard", color: "bg-gray-600", count: 0, status: "active" },
   { name: "Sales", href: "/sales", icon: TrendingUp, description: "Sales pipeline", color: "bg-blue-700", count: 0, status: "active" },
   { name: "Marketing", href: "/marketing", icon: BarChart2, description: "Marketing campaigns", color: "bg-pink-700", count: 0, status: "active" },
   { name: "Companies", href: "/companies", icon: Building2, description: "Manage companies", color: "bg-cyan-600", count: 0, status: "active" },

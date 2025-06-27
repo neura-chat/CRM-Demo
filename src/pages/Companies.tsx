@@ -53,6 +53,24 @@ import {
   TableHead,
 } from "@/components/ui/table";
 import { toast } from "@/components/ui/use-toast";
+import CompanyContactTable from "@/components/CompanyContactTable";
+import CompanyContactDialog from "@/components/CompanyContactDialog";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
+import { MoreVertical, Trash2 } from "lucide-react";
+import {
+  Dialog as ViewDialog,
+  DialogContent as ViewDialogContent,
+  DialogHeader as ViewDialogHeader,
+  DialogTitle as ViewDialogTitle,
+  DialogDescription as ViewDialogDescription,
+} from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from "@/components/ui/alert-dialog";
 
 const companies = [
   {
@@ -153,6 +171,25 @@ export default function Companies() {
     lastContact: "",
   });
 
+  // Pagination and search state
+  const [accountPage, setAccountPage] = useState(1);
+  const [contactPage, setContactPage] = useState(1);
+  const [viewPerPage] = useState(10);
+  const [accountSearch, setAccountSearch] = useState("");
+  const [contactSearch, setContactSearch] = useState("");
+  const [selectedAccounts, setSelectedAccounts] = useState<string[]>([]);
+  const [selectedContacts, setSelectedContacts] = useState<string[]>([]);
+  const [contactStatusFilter, setContactStatusFilter] = useState('all');
+
+  // Filtered and paginated data
+  const filteredAccounts = companiesState.filter(c => c.name.toLowerCase().includes(accountSearch.toLowerCase()));
+  const paginatedAccounts = filteredAccounts.slice((accountPage-1)*viewPerPage, accountPage*viewPerPage);
+  const filteredContacts = contactsState.filter(c =>
+    c.name.toLowerCase().includes(contactSearch.toLowerCase()) &&
+    (contactStatusFilter === 'all' || c.status === contactStatusFilter)
+  );
+  const paginatedContacts = filteredContacts.slice((contactPage-1)*viewPerPage, contactPage*viewPerPage);
+
   // Handlers for form changes
   const handleCompanyChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -220,6 +257,147 @@ export default function Companies() {
     });
   };
 
+  // Define columns for accounts and contacts
+  const accountColumns = [
+    { key: "id", label: "ID" },
+    { key: "name", label: "Name" },
+    { key: "industry", label: "Industry" },
+    { key: "size", label: "Size" },
+    { key: "location", label: "Location" },
+    { key: "website", label: "Website" },
+    { key: "contacts", label: "Contacts" },
+    { key: "revenue", label: "Revenue" },
+    { key: "status", label: "Status", render: (row: any) => (
+      <span className={`px-2 py-1 rounded text-xs ${row.status === "active" ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"}`}>{row.status}</span>
+    ) },
+    { key: "lastContact", label: "Last Contact" },
+  ];
+  const contactColumns = [
+    { key: "id", label: "ID" },
+    { key: "name", label: "Name" },
+    { key: "title", label: "Title" },
+    { key: "company", label: "Company" },
+    { key: "email", label: "Email" },
+    { key: "phone", label: "Phone" },
+    { key: "status", label: "Status", render: (row: any) => (
+      <span className={`px-2 py-1 rounded text-xs ${row.status === "active" ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"}`}>{row.status}</span>
+    ) },
+    { key: "lastContact", label: "Last Contact" },
+  ];
+  // Define fields for dialogs
+  const accountFields = [
+    { name: "name", label: "Name", required: true },
+    { name: "industry", label: "Industry", required: true },
+    { name: "size", label: "Size", required: true },
+    { name: "location", label: "Location", required: true },
+    { name: "website", label: "Website", required: true },
+    { name: "contacts", label: "Contacts", type: "number", required: true },
+    { name: "revenue", label: "Revenue", required: true },
+    { name: "status", label: "Status", as: "select" as const, options: [
+      { value: "active", label: "Active" },
+      { value: "prospect", label: "Prospect" },
+    ], required: true },
+    { name: "lastContact", label: "Last Contact", required: true },
+  ];
+  const contactFields = [
+    { name: "name", label: "Name", required: true },
+    { name: "title", label: "Title", required: true },
+    { name: "company", label: "Company", required: true },
+    { name: "email", label: "Email", required: true },
+    { name: "phone", label: "Phone", required: true },
+    { name: "status", label: "Status", as: "select" as const, options: [
+      { value: "active", label: "Active" },
+      { value: "prospect", label: "Prospect" },
+    ], required: true },
+    { name: "lastContact", label: "Last Contact", required: true },
+  ];
+  // Actions for table rows (view/edit only for now)
+  const accountActions = [
+    { icon: <Eye className="w-4 h-4" />, onClick: () => {}, label: "View" },
+    { icon: <Edit className="w-4 h-4" />, onClick: () => {}, label: "Edit" },
+  ];
+  const contactActions = [
+    { icon: <Eye className="w-4 h-4" />, onClick: () => {}, label: "View" },
+    { icon: <Edit className="w-4 h-4" />, onClick: () => {}, label: "Edit" },
+  ];
+
+  // State for view, edit, and delete dialogs
+  const [viewContact, setViewContact] = useState<any | null>(null);
+  const [editContact, setEditContact] = useState<any | null>(null);
+  const [deleteContact, setDeleteContact] = useState<any | null>(null);
+
+  // Handler for editing contact
+  const handleEditContact = (contact: any) => {
+    setEditContact(contact);
+    setNewContact(contact);
+    setIsCreateDialogOpen(true);
+  };
+  // Handler for saving edited contact
+  const handleSaveEditContact = (e: React.FormEvent) => {
+    e.preventDefault();
+    setContactsState(prev => prev.map(c => c.id === newContact.id ? { ...newContact } : c));
+    setEditContact(null);
+    setIsCreateDialogOpen(false);
+    setNewContact({
+      id: "",
+      name: "",
+      title: "",
+      company: "",
+      email: "",
+      phone: "",
+      status: "active",
+      lastContact: "",
+    });
+    toast({ title: "Contact updated", description: `The contact '${newContact.name}' was updated successfully.` });
+  };
+  // Handler for deleting contact
+  const handleDeleteContact = () => {
+    if (deleteContact) {
+      setContactsState(prev => prev.filter(c => c.id !== deleteContact.id));
+      setDeleteContact(null);
+      toast({ title: "Contact deleted", description: `The contact was deleted successfully.` });
+    }
+  };
+
+  // Render actions dropdown
+  const renderActions = (row: any, type: 'account' | 'contact') => (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button size="icon" variant="ghost"><MoreVertical className="w-4 h-4" /></Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuItem onClick={() => type === 'contact' ? setViewContact(row) : null}>
+          <Eye className="w-4 h-4 mr-2" /> View
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => type === 'contact' ? handleEditContact(row) : null}>
+          <Edit className="w-4 h-4 mr-2" /> Edit
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <DropdownMenuItem className="text-red-600" onClick={() => type === 'contact' ? setDeleteContact(row) : null}>
+              <Trash2 className="w-4 h-4 mr-2" /> Delete
+            </DropdownMenuItem>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete Contact</AlertDialogTitle>
+              <AlertDialogDescription>Are you sure you want to delete {row.name}?</AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => setDeleteContact(null)}>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={handleDeleteContact}>Delete</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+
+  // Row link for name
+  const accountRowLink = (row: any) => undefined; // Set to a URL if needed
+  const contactRowLink = (row: any) => undefined; // Set to a URL if needed
+
   return (
     <div className="p-8 space-y-8 bg-background min-h-screen">
       {/* Header */}
@@ -252,7 +430,7 @@ export default function Companies() {
               </Button>
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input placeholder="Search accounts..." className="w-64 pl-10" />
+                <Input placeholder="Search accounts..." className="w-64 pl-10" value={accountSearch} onChange={e => setAccountSearch(e.target.value)} />
               </div>
             </div>
             <div className="flex items-center space-x-2">
@@ -275,65 +453,35 @@ export default function Companies() {
                 </DialogContent>
               </Dialog>
               {/* Add Account Dialog */}
-              <Dialog open={isCreateDialogOpen && activeSubTab === "accounts"} onOpenChange={setIsCreateDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button>
-                    <Plus className="w-4 h-4 mr-2" />
-                    Add Account
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Add Account</DialogTitle>
-                  </DialogHeader>
-                  <form onSubmit={handleAddCompany} className="space-y-3">
-                    <div className="grid grid-cols-2 gap-2">
-                      <div>
-                        <Label>Name</Label>
-                        <Input name="name" value={newCompany.name} onChange={handleCompanyChange} required />
-                      </div>
-                      <div>
-                        <Label>Industry</Label>
-                        <Input name="industry" value={newCompany.industry} onChange={handleCompanyChange} required />
-                      </div>
-                      <div>
-                        <Label>Size</Label>
-                        <Input name="size" value={newCompany.size} onChange={handleCompanyChange} required />
-                      </div>
-                      <div>
-                        <Label>Location</Label>
-                        <Input name="location" value={newCompany.location} onChange={handleCompanyChange} required />
-                      </div>
-                      <div>
-                        <Label>Website</Label>
-                        <Input name="website" value={newCompany.website} onChange={handleCompanyChange} required />
-                      </div>
-                      <div>
-                        <Label>Contacts</Label>
-                        <Input name="contacts" type="number" value={newCompany.contacts} onChange={handleCompanyChange} required />
-                      </div>
-                      <div>
-                        <Label>Revenue</Label>
-                        <Input name="revenue" value={newCompany.revenue} onChange={handleCompanyChange} required />
-                      </div>
-                      <div>
-                        <Label>Status</Label>
-                        <select name="status" value={newCompany.status} onChange={handleCompanyChange} className="w-full border rounded px-2 py-1">
-                          <option value="active">Active</option>
-                          <option value="prospect">Prospect</option>
-                        </select>
-                      </div>
-                      <div>
-                        <Label>Last Contact</Label>
-                        <Input name="lastContact" value={newCompany.lastContact} onChange={handleCompanyChange} required />
-                      </div>
-                    </div>
-                    <DialogFooter>
-                      <Button type="submit">Add</Button>
-                    </DialogFooter>
-                  </form>
-                </DialogContent>
-              </Dialog>
+              <CompanyContactDialog
+                open={isCreateDialogOpen && activeSubTab === "accounts"}
+                onOpenChange={setIsCreateDialogOpen}
+                onSubmit={handleAddCompany}
+                fields={accountFields}
+                values={newCompany}
+                onChange={handleCompanyChange}
+                title="Add Account"
+                submitLabel="Add"
+              />
+              <Button onClick={() => setIsCreateDialogOpen(true)}>
+                <Plus className="w-4 h-4 mr-2" />
+                Add Account
+              </Button>
+            </div>
+          </div>
+          {/* Pagination Controls */}
+          <div className="flex items-center justify-between mb-2">
+            <div>
+              <span>View </span>
+              <select value={viewPerPage} disabled className="border rounded px-2 py-1">
+                <option value={10}>10</option>
+              </select>
+              <span> per page</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Button variant="outline" size="icon" disabled={accountPage === 1} onClick={() => setAccountPage(p => Math.max(1, p-1))}>{"<"}</Button>
+              <span>Page {accountPage} of {Math.ceil(filteredAccounts.length/viewPerPage) || 1}</span>
+              <Button variant="outline" size="icon" disabled={accountPage >= Math.ceil(filteredAccounts.length/viewPerPage)} onClick={() => setAccountPage(p => p+1)}>{">"}</Button>
             </div>
           </div>
           <Card className="border border-border/50">
@@ -357,47 +505,15 @@ export default function Companies() {
             </CardHeader>
             <CardContent>
               <div className="overflow-x-auto">
-                <Table className="text-xs">
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>ID</TableHead>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Industry</TableHead>
-                      <TableHead>Size</TableHead>
-                      <TableHead>Location</TableHead>
-                      <TableHead>Website</TableHead>
-                      <TableHead>Contacts</TableHead>
-                      <TableHead>Revenue</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Last Contact</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {companiesState.map((company) => (
-                      <TableRow key={company.id}>
-                        <TableCell>{company.id}</TableCell>
-                        <TableCell>{company.name}</TableCell>
-                        <TableCell>{company.industry}</TableCell>
-                        <TableCell>{company.size}</TableCell>
-                        <TableCell>{company.location}</TableCell>
-                        <TableCell>{company.website}</TableCell>
-                        <TableCell>{company.contacts}</TableCell>
-                        <TableCell>{company.revenue}</TableCell>
-                        <TableCell>
-                          <span className={`px-2 py-1 rounded text-xs ${company.status === "active" ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"}`}>{company.status}</span>
-                        </TableCell>
-                        <TableCell>{company.lastContact}</TableCell>
-                        <TableCell>
-                          <div className="flex space-x-1">
-                            <Button variant="ghost" size="icon" className="h-6 w-6 p-0"><Eye className="w-4 h-4" /></Button>
-                            <Button variant="ghost" size="icon" className="h-6 w-6 p-0"><Edit className="w-4 h-4" /></Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                <CompanyContactTable
+                  columns={accountColumns}
+                  data={paginatedAccounts}
+                  showCheckbox
+                  showRowNumber
+                  rowLink={accountRowLink}
+                  renderActions={row => renderActions(row, 'account')}
+                  onSelectionChange={setSelectedAccounts}
+                />
               </div>
             </CardContent>
           </Card>
@@ -407,10 +523,28 @@ export default function Companies() {
         <TabsContent value="contacts" className="space-y-6">
           <div className="flex justify-between items-center mb-4">
             <div className="flex items-center space-x-2">
+              <Button variant="outline">
+                <Filter className="w-4 h-4 mr-2" />
+                Filter
+              </Button>
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input placeholder="Search contacts..." className="w-64 pl-10" />
+                <Input placeholder="Search contacts..." className="w-64 pl-10" value={contactSearch} onChange={e => setContactSearch(e.target.value)} />
               </div>
+              <select
+                className="border rounded px-2 py-1 ml-2"
+                value={contactStatusFilter}
+                onChange={e => setContactStatusFilter(e.target.value)}
+              >
+                <option value="all">All Statuses</option>
+                <option value="qualified">Qualified</option>
+                <option value="new">New</option>
+                <option value="hot">Hot</option>
+                <option value="cold">Cold</option>
+                <option value="inactive">Inactive</option>
+                <option value="active">Active</option>
+                <option value="prospect">Prospect</option>
+              </select>
             </div>
             <div className="flex items-center space-x-2">
               <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
@@ -431,58 +565,39 @@ export default function Companies() {
                   </DialogFooter>
                 </DialogContent>
               </Dialog>
-              {/* Add Contact Dialog */}
-              <Dialog open={isCreateDialogOpen && activeSubTab === "contacts"} onOpenChange={setIsCreateDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button>
-                    <Plus className="w-4 h-4 mr-2" />
-                    Add Contact
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Add Contact</DialogTitle>
-                  </DialogHeader>
-                  <form onSubmit={handleAddContact} className="space-y-3">
-                    <div className="grid grid-cols-2 gap-2">
-                      <div>
-                        <Label>Name</Label>
-                        <Input name="name" value={newContact.name} onChange={handleContactChange} required />
-                      </div>
-                      <div>
-                        <Label>Title</Label>
-                        <Input name="title" value={newContact.title} onChange={handleContactChange} required />
-                      </div>
-                      <div>
-                        <Label>Company</Label>
-                        <Input name="company" value={newContact.company} onChange={handleContactChange} required />
-                      </div>
-                      <div>
-                        <Label>Email</Label>
-                        <Input name="email" value={newContact.email} onChange={handleContactChange} required />
-                      </div>
-                      <div>
-                        <Label>Phone</Label>
-                        <Input name="phone" value={newContact.phone} onChange={handleContactChange} required />
-                      </div>
-                      <div>
-                        <Label>Status</Label>
-                        <select name="status" value={newContact.status} onChange={handleContactChange} className="w-full border rounded px-2 py-1">
-                          <option value="active">Active</option>
-                          <option value="prospect">Prospect</option>
-                        </select>
-                      </div>
-                      <div>
-                        <Label>Last Contact</Label>
-                        <Input name="lastContact" value={newContact.lastContact} onChange={handleContactChange} required />
-                      </div>
-                    </div>
-                    <DialogFooter>
-                      <Button type="submit">Add</Button>
-                    </DialogFooter>
-                  </form>
-                </DialogContent>
-              </Dialog>
+              {/* Add Contact Dialog (for both add and edit) */}
+              <CompanyContactDialog
+                open={isCreateDialogOpen && activeSubTab === "contacts"}
+                onOpenChange={open => {
+                  setIsCreateDialogOpen(open);
+                  if (!open) setEditContact(null);
+                }}
+                onSubmit={editContact ? handleSaveEditContact : handleAddContact}
+                fields={contactFields}
+                values={newContact}
+                onChange={handleContactChange}
+                title={editContact ? "Edit Contact" : "Add Contact"}
+                submitLabel={editContact ? "Save" : "Add"}
+              />
+              <Button onClick={() => setIsCreateDialogOpen(true)}>
+                <Plus className="w-4 h-4 mr-2" />
+                Add Contact
+              </Button>
+            </div>
+          </div>
+          {/* Pagination Controls */}
+          <div className="flex items-center justify-between mb-2">
+            <div>
+              <span>View </span>
+              <select value={viewPerPage} disabled className="border rounded px-2 py-1">
+                <option value={10}>10</option>
+              </select>
+              <span> per page</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Button variant="outline" size="icon" disabled={contactPage === 1} onClick={() => setContactPage(p => Math.max(1, p-1))}>{"<"}</Button>
+              <span>Page {contactPage} of {Math.ceil(filteredContacts.length/viewPerPage) || 1}</span>
+              <Button variant="outline" size="icon" disabled={contactPage >= Math.ceil(filteredContacts.length/viewPerPage)} onClick={() => setContactPage(p => p+1)}>{">"}</Button>
             </div>
           </div>
           <Card className="border border-border/50">
@@ -493,46 +608,37 @@ export default function Companies() {
             </CardHeader>
             <CardContent>
               <div className="overflow-x-auto">
-                <Table className="text-xs">
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>ID</TableHead>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Title</TableHead>
-                      <TableHead>Company</TableHead>
-                      <TableHead>Email</TableHead>
-                      <TableHead>Phone</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Last Contact</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {contactsState.map((contact) => (
-                      <TableRow key={contact.id}>
-                        <TableCell>{contact.id}</TableCell>
-                        <TableCell>{contact.name}</TableCell>
-                        <TableCell>{contact.title}</TableCell>
-                        <TableCell>{contact.company}</TableCell>
-                        <TableCell>{contact.email}</TableCell>
-                        <TableCell>{contact.phone}</TableCell>
-                        <TableCell>
-                          <span className={`px-2 py-1 rounded text-xs ${contact.status === "active" ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"}`}>{contact.status}</span>
-                        </TableCell>
-                        <TableCell>{contact.lastContact}</TableCell>
-                        <TableCell>
-                          <div className="flex space-x-1">
-                            <Button variant="ghost" size="icon" className="h-6 w-6 p-0"><Eye className="w-4 h-4" /></Button>
-                            <Button variant="ghost" size="icon" className="h-6 w-6 p-0"><Edit className="w-4 h-4" /></Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                <CompanyContactTable
+                  columns={contactColumns}
+                  data={paginatedContacts}
+                  showCheckbox
+                  showRowNumber
+                  rowLink={contactRowLink}
+                  renderActions={row => renderActions(row, 'contact')}
+                  onSelectionChange={setSelectedContacts}
+                />
               </div>
             </CardContent>
           </Card>
+          {/* View Contact Dialog */}
+          <ViewDialog open={!!viewContact} onOpenChange={open => { if (!open) setViewContact(null); }}>
+            <ViewDialogContent>
+              <ViewDialogHeader>
+                <ViewDialogTitle>Contact Details</ViewDialogTitle>
+              </ViewDialogHeader>
+              {viewContact && (
+                <div className="space-y-2">
+                  <div><b>Name:</b> {viewContact.name}</div>
+                  <div><b>Title:</b> {viewContact.title}</div>
+                  <div><b>Company:</b> {viewContact.company}</div>
+                  <div><b>Email:</b> {viewContact.email}</div>
+                  <div><b>Phone:</b> {viewContact.phone}</div>
+                  <div><b>Status:</b> {viewContact.status}</div>
+                  <div><b>Last Contact:</b> {viewContact.lastContact}</div>
+                </div>
+              )}
+            </ViewDialogContent>
+          </ViewDialog>
         </TabsContent>
       </Tabs>
       {/* Scaffolded dialogs for CRUD (to be implemented) */}
