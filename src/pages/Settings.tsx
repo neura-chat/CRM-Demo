@@ -100,6 +100,8 @@ export default function Settings() {
   const [fontSize, setFontSize] = useState("medium");
   const [sidebarBg, setSidebarBg] = useState("#1e293b");
   const [sidebarIconColor, setSidebarIconColor] = useState("#94a3b8");
+  const [screenRatio, setScreenRatio] = useState("100");
+  const [isCompactView, setIsCompactView] = useState(false);
 
   useEffect(() => {
     if (isDarkMode) {
@@ -132,6 +134,30 @@ export default function Settings() {
   useEffect(() => {
     document.documentElement.style.setProperty("--sidebar-icon-color", sidebarIconColor);
   }, [sidebarIconColor]);
+
+  useEffect(() => {
+    // Convert percentage to decimal scale factor
+    const scaleFactor = parseInt(screenRatio) / 100;
+    
+    // Apply proportional scaling to different aspects
+    document.documentElement.style.setProperty("--font-scale", scaleFactor.toString());
+    document.documentElement.style.setProperty("--spacing-scale", scaleFactor.toString());
+    document.documentElement.style.setProperty("--icon-scale", scaleFactor.toString());
+    document.documentElement.style.setProperty("--element-scale", scaleFactor.toString());
+  }, [screenRatio]);
+
+  useEffect(() => {
+    // Apply compact view settings
+    const compactMultiplier = isCompactView ? 0.75 : 1;
+    document.documentElement.style.setProperty("--compact-scale", compactMultiplier.toString());
+    
+    // Apply compact view class to body for global styling
+    if (isCompactView) {
+      document.body.classList.add("compact-view");
+    } else {
+      document.body.classList.remove("compact-view");
+    }
+  }, [isCompactView]);
 
   return (
     <div className="p-8 space-y-8 bg-background min-h-screen">
@@ -482,8 +508,8 @@ export default function Settings() {
 
         {/* Appearance */}
         <TabsContent value="appearance" className="space-y-6">
-          <Card className="border border-border/50">
-            <CardHeader>
+          <Card className="appearance-settings-card border border-border/50 w-full max-w-none">
+            <CardHeader className="pb-4">
               <CardTitle className="flex items-center space-x-2">
                 <Palette className="w-5 h-5" />
                 <span>Appearance Settings</span>
@@ -492,7 +518,7 @@ export default function Settings() {
                 Customize the look and feel of your dashboard
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
+            <CardContent className="space-y-6 p-6">
               <div className="space-y-4">
                 <div>
                   <h4 className="font-medium mb-3">Theme</h4>
@@ -554,6 +580,27 @@ export default function Settings() {
                   </Select>
                 </div>
 
+                <div>
+                  <Label htmlFor="screenRatio">Screen Zoom</Label>
+                  <Select value={screenRatio} onValueChange={setScreenRatio}>
+                    <SelectTrigger className="w-48">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="50">50% - Compact</SelectItem>
+                      <SelectItem value="70">70% - Small</SelectItem>
+                      <SelectItem value="85">85% - Medium Small</SelectItem>
+                      <SelectItem value="100">100% - Default</SelectItem>
+                      <SelectItem value="115">115% - Medium Large</SelectItem>
+                      <SelectItem value="135">135% - Large</SelectItem>
+                      <SelectItem value="150">150% - Extra Large</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Adjust the overall size of the interface elements
+                  </p>
+                </div>
+
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="font-medium">Compact View</p>
@@ -561,7 +608,10 @@ export default function Settings() {
                       Reduce spacing for more content
                     </p>
                   </div>
-                  <Switch />
+                  <Switch 
+                    checked={isCompactView}
+                    onCheckedChange={setIsCompactView}
+                  />
                 </div>
 
                 <div className="flex items-center justify-between">

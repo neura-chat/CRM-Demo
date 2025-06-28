@@ -653,28 +653,7 @@ export default function Sales({ defaultTab = "analytics" }) {
           <h1 className="text-3xl font-bold text-foreground flex items-center space-x-3">
             Sales
           </h1>
-          <div className="flex items-center space-x-2 mt-1">
-            {activeTab === "leads" && <TrendingUp className="w-6 h-6 text-primary" />}
-            {activeTab === "contacts" && <Users className="w-6 h-6 text-primary" />}
-            {/* Add more icons for other tabs if desired */}
-            <span className="text-xl font-semibold text-muted-foreground">
-              {
-                activeTab === "leads"
-                  ? "Leads"
-                  : activeTab === "contacts"
-                  ? "Contacts"
-                  : activeTab === "opportunities"
-                  ? "Pipeline"
-                  : activeTab === "quotes"
-                  ? "Quotes"
-                  : activeTab === "products"
-                  ? "Products"
-                  : activeTab === "orders"
-                  ? "Orders"
-                  : "Overview"
-              }
-            </span>
-          </div>
+          
           <p className="text-muted-foreground mt-1">
             {activeTab === "leads"
               ? "Manage your leads and track their progress"
@@ -700,7 +679,7 @@ export default function Sales({ defaultTab = "analytics" }) {
       </div>
 
       {/* Sales Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      {/* <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {salesMetrics.map((metric) => (
           <Card key={metric.title} className="border border-border/50">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -720,7 +699,7 @@ export default function Sales({ defaultTab = "analytics" }) {
             </CardContent>
           </Card>
         ))}
-      </div>
+      </div> */}
 
       {/* Sales Modules Tabs */}
       <Tabs

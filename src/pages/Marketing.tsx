@@ -33,6 +33,8 @@ import {
   Target,
   MessageSquare,
   Send,
+  Trash,
+  MoreVertical,
 } from "lucide-react";
 import {
   Table,
@@ -43,6 +45,12 @@ import {
   TableHead,
 } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "@/components/ui/dropdown-menu";
 
 const initialCampaigns = [
   {
@@ -85,6 +93,29 @@ export default function Marketing() {
   });
   const [showModal, setShowModal] = useState(false);
   const [showAnalytics, setShowAnalytics] = useState(false);
+  const [editCampaign, setEditCampaign] = useState(null);
+  const [viewCampaign, setViewCampaign] = useState(null);
+  const [deleteCampaign, setDeleteCampaign] = useState(null);
+  const [search, setSearch] = useState("");
+  const [filterStatus, setFilterStatus] = useState("");
+  const [selected, setSelected] = useState({});
+  const filteredCampaigns = campaigns.filter(c =>
+    (!search || c.name.toLowerCase().includes(search.toLowerCase()) || c.type.toLowerCase().includes(search.toLowerCase())) &&
+    (filterStatus === "all" || !filterStatus || c.status === filterStatus)
+  );
+  const allSelected = filteredCampaigns.length > 0 && filteredCampaigns.every(c => selected[c.id]);
+  const toggleSelect = id => setSelected(sel => ({ ...sel, [id]: !sel[id] }));
+  const toggleAll = () => {
+    if (allSelected) {
+      const newSel = { ...selected };
+      filteredCampaigns.forEach(c => { newSel[c.id] = false; });
+      setSelected(newSel);
+    } else {
+      const newSel = { ...selected };
+      filteredCampaigns.forEach(c => { newSel[c.id] = true; });
+      setSelected(newSel);
+    }
+  };
 
   const resetForm = () => setForm({
     name: "",
@@ -134,16 +165,6 @@ export default function Marketing() {
           <p className="text-muted-foreground mt-1">
             Create and manage marketing campaigns
           </p>
-        </div>
-        <div className="flex items-center space-x-3">
-          <Button variant="outline" onClick={() => setShowAnalytics(true)}>
-            <BarChart3 className="w-4 h-4 mr-2" />
-            Analytics
-          </Button>
-          <Button onClick={() => setShowModal(true)}>
-            <Plus className="w-4 h-4 mr-2" />
-            New Campaign
-          </Button>
         </div>
       </div>
 
@@ -325,6 +346,151 @@ export default function Marketing() {
         </DialogContent>
       </Dialog>
 
+      {/* Edit Campaign Modal */}
+      <Dialog open={!!editCampaign} onOpenChange={val => { if (!val) setEditCampaign(null); }}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Edit Campaign</DialogTitle>
+            <DialogDescription>
+              Update the details of your marketing campaign.
+            </DialogDescription>
+          </DialogHeader>
+          {editCampaign && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="editCampaignName">Campaign Name</Label>
+                  <Input
+                    id="editCampaignName"
+                    value={editCampaign.name}
+                    onChange={e => setEditCampaign({ ...editCampaign, name: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="editCampaignType">Campaign Type</Label>
+                  <Select
+                    value={editCampaign.type.toLowerCase()}
+                    onValueChange={val => setEditCampaign({ ...editCampaign, type: val.charAt(0).toUpperCase() + val.slice(1) })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="email">Email Marketing</SelectItem>
+                      <SelectItem value="social">Social Media</SelectItem>
+                      <SelectItem value="sms">SMS Campaign</SelectItem>
+                      <SelectItem value="push">Push Notifications</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="editScheduleDate">Schedule Date</Label>
+                  <Input
+                    id="editScheduleDate"
+                    type="datetime-local"
+                    value={editCampaign.scheduled}
+                    onChange={e => setEditCampaign({ ...editCampaign, scheduled: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="editBudget">Budget</Label>
+                  <Input
+                    id="editBudget"
+                    type="number"
+                    value={editCampaign.budget.replace(/[^\d.]/g, "")}
+                    onChange={e => setEditCampaign({ ...editCampaign, budget: `$${Number(e.target.value).toLocaleString()}` })}
+                  />
+                </div>
+              </div>
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="editSubject">Subject Line</Label>
+                  <Input
+                    id="editSubject"
+                    value={editCampaign.subject || ""}
+                    onChange={e => setEditCampaign({ ...editCampaign, subject: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="editContent">Content Editor</Label>
+                  <Textarea
+                    id="editContent"
+                    rows={8}
+                    value={editCampaign.content || ""}
+                    onChange={e => setEditCampaign({ ...editCampaign, content: e.target.value })}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+          <DialogFooter className="flex justify-end space-x-3 pt-6 border-t">
+            <Button variant="outline" onClick={() => setEditCampaign(null)}>Cancel</Button>
+            <Button
+              onClick={() => {
+                setCampaigns(campaigns.map(c => c.id === editCampaign.id ? { ...c, ...editCampaign } : c));
+                setEditCampaign(null);
+              }}
+              disabled={!editCampaign || !editCampaign.name || !editCampaign.type || !editCampaign.scheduled}
+            >
+              Save Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* View Campaign Modal */}
+      <Dialog open={!!viewCampaign} onOpenChange={val => { if (!val) setViewCampaign(null); }}>
+        <DialogContent className="max-w-xl">
+          <DialogHeader>
+            <DialogTitle>Campaign Details</DialogTitle>
+            <DialogDescription>View all details of this campaign.</DialogDescription>
+          </DialogHeader>
+          {viewCampaign && (
+            <div className="space-y-4">
+              <div><b>Name:</b> {viewCampaign.name}</div>
+              <div><b>Type:</b> {viewCampaign.type}</div>
+              <div><b>Status:</b> {viewCampaign.status}</div>
+              <div><b>Scheduled:</b> {viewCampaign.scheduled}</div>
+              <div><b>Budget:</b> {viewCampaign.budget}</div>
+              <div><b>Subject:</b> {viewCampaign.subject || "-"}</div>
+              <div><b>Content:</b> <div className="whitespace-pre-line border rounded p-2 bg-muted/50">{viewCampaign.content || "-"}</div></div>
+              <div className="flex space-x-4">
+                <div><b>Sent:</b> {viewCampaign.sent}</div>
+                <div><b>Opened:</b> {viewCampaign.opened}</div>
+                <div><b>Clicked:</b> {viewCampaign.clicked}</div>
+              </div>
+            </div>
+          )}
+          <DialogFooter className="flex justify-end pt-6 border-t">
+            <Button variant="outline" onClick={() => setViewCampaign(null)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Campaign Modal */}
+      <Dialog open={!!deleteCampaign} onOpenChange={val => { if (!val) setDeleteCampaign(null); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Delete Campaign</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete the campaign "{deleteCampaign?.name}"? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex justify-end pt-6 border-t">
+            <Button variant="outline" onClick={() => setDeleteCampaign(null)}>Cancel</Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                setCampaigns(campaigns.filter(c => c.id !== deleteCampaign.id));
+                setDeleteCampaign(null);
+              }}
+            >
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Marketing Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         {[
@@ -349,84 +515,116 @@ export default function Marketing() {
         ))}
       </div>
 
-      {/* Marketing Modules */}
-      <Tabs
-        value={activeTab}
-        onValueChange={setActiveTab}
-        className="space-y-6"
-      >
-        <TabsList className="grid w-full grid-cols-1">
-          <TabsTrigger value="campaigns">Campaigns</TabsTrigger>
-        </TabsList>
-
-        {/* Campaign List */}
-        <TabsContent value="campaigns" className="space-y-6">
-          <Card className="border border-border/50">
-            <CardHeader>
-              <CardTitle>Marketing Campaigns</CardTitle>
-              <CardDescription>
-                Manage your marketing campaigns and performance
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>ID</TableHead>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Sent</TableHead>
-                    <TableHead>Opened</TableHead>
-                    <TableHead>Clicked</TableHead>
-                    <TableHead>Scheduled</TableHead>
-                    <TableHead>Budget</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {campaigns.map((campaign) => (
-                    <TableRow key={campaign.id}>
-                      <TableCell>{campaign.id}</TableCell>
-                      <TableCell>{campaign.name}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline">{campaign.type}</Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={campaign.status === "active" ? "default" : "secondary"}>{campaign.status}</Badge>
-                      </TableCell>
-                      <TableCell>{campaign.sent.toLocaleString()}</TableCell>
-                      <TableCell>{campaign.opened.toLocaleString()}</TableCell>
-                      <TableCell>{campaign.clicked.toLocaleString()}</TableCell>
-                      <TableCell>{campaign.scheduled}</TableCell>
-                      <TableCell>{campaign.budget}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center space-x-2">
-                          <Button variant="ghost" size="sm">
-                            <Eye className="w-4 h-4" />
-                          </Button>
-                          <Button variant="ghost" size="sm">
-                            <Edit className="w-4 h-4" />
-                          </Button>
-                          {campaign.status === "active" ? (
-                            <Button variant="ghost" size="sm">
-                              <Pause className="w-4 h-4" />
-                            </Button>
-                          ) : (
-                            <Button variant="ghost" size="sm">
-                              <Play className="w-4 h-4" />
-                            </Button>
-                          )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+      {/* Campaign Directory Section (New UI) */}
+      <Card className="border border-border/50 mt-8">
+        <CardHeader>
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div>
+              <CardTitle className="text-2xl font-bold">Campaign Directory</CardTitle>
+              <CardDescription>Manage your marketing campaigns and performance</CardDescription>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" onClick={() => setShowAnalytics(true)}>
+                <BarChart3 className="w-4 h-4 mr-2" /> Analytics
+              </Button>
+              <Button onClick={() => setShowModal(true)}>
+                <Plus className="w-4 h-4 mr-2" /> Add Campaign
+              </Button>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
+            <div className="flex gap-2 w-full md:w-auto">
+              <Button variant="outline" className="shrink-0">Filter</Button>
+              <Input
+                placeholder="Search campaigns..."
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                className="w-full md:w-64"
+              />
+            </div>
+            <Select value={filterStatus} onValueChange={setFilterStatus}>
+              <SelectTrigger className="w-48">
+                <SelectValue placeholder="Filter by status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Statuses</SelectItem>
+                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="draft">Draft</SelectItem>
+                <SelectItem value="paused">Paused</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead><input type="checkbox" checked={allSelected} onChange={toggleAll} /></TableHead>
+                <TableHead>#</TableHead>
+                <TableHead>ID</TableHead>
+                <TableHead>Name</TableHead>
+                <TableHead>Type</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Sent</TableHead>
+                <TableHead>Opened</TableHead>
+                <TableHead>Clicked</TableHead>
+                <TableHead>Scheduled</TableHead>
+                <TableHead>Budget</TableHead>
+                <TableHead>Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredCampaigns.map((campaign, idx) => (
+                <TableRow key={campaign.id}>
+                  <TableCell><input type="checkbox" checked={selected[campaign.id] || false} onChange={() => toggleSelect(campaign.id)} /></TableCell>
+                  <TableCell>{idx + 1}</TableCell>
+                  <TableCell>{campaign.id}</TableCell>
+                  <TableCell>{campaign.name}</TableCell>
+                  <TableCell><Badge variant="outline">{campaign.type}</Badge></TableCell>
+                  <TableCell><Badge className={campaign.status === "active" ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"}>{campaign.status}</Badge></TableCell>
+                  <TableCell>{campaign.sent.toLocaleString()}</TableCell>
+                  <TableCell>{campaign.opened.toLocaleString()}</TableCell>
+                  <TableCell>{campaign.clicked.toLocaleString()}</TableCell>
+                  <TableCell>{campaign.scheduled}</TableCell>
+                  <TableCell>{campaign.budget}</TableCell>
+                  <TableCell>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon">
+                          <MoreVertical className="w-4 h-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => setViewCampaign(campaign)}>
+                          <Eye className="w-4 h-4 mr-2" /> View
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setEditCampaign(campaign)}>
+                          <Edit className="w-4 h-4 mr-2" /> Edit
+                        </DropdownMenuItem>
+                        {campaign.status === "active" ? (
+                          <DropdownMenuItem>
+                            <Pause className="w-4 h-4 mr-2" /> Pause
+                          </DropdownMenuItem>
+                        ) : (
+                          <DropdownMenuItem>
+                            <Play className="w-4 h-4 mr-2" /> Start
+                          </DropdownMenuItem>
+                        )}
+                        <DropdownMenuItem onClick={() => setDeleteCampaign(campaign)} className="text-red-600">
+                          <Trash className="w-4 h-4 mr-2" /> Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+          {filteredCampaigns.length === 0 && (
+            <div className="text-center text-muted-foreground py-8">No campaigns found.</div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
